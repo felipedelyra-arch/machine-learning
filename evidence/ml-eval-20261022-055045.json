@@ -1,0 +1,189 @@
+{
+ "meta": {
+  "ts": "2026-10-22T05:50:45-0300",
+  "sklearn": "1.7.2",
+  "numpy": "2.5.4",
+  "split_sizes": {
+   "train": [
+    144,
+    60
+   ],
+   "val": [
+    48,
+    20
+   ],
+   "test": [
+    108,
+    40
+   ]
+  },
+  "heldout_families": [
+   "benign_editor_atomic_save",
+   "benign_media_resync",
+   "sim_tmp_rename_replace"
+  ],
+  "train_rows": 40165,
+  "model_sha256": "4d96dc59b0a9967d7d67aa2eeba4e4567b6a4aadf7db884bf32cc4cb31171d21",
+  "coef": {
+   "overwrite": 2.389,
+   "write_new": -21.594,
+   "rename_existing": 10.598,
+   "replace": 0.0,
+   "delete_existing": 2.734,
+   "high_entropy_writes": 16.611,
+   "unsampled_writes": 0.0,
+   "high_entropy_ratio": 2.174
+  }
+ },
+ "results": {
+  "rule_R1": {
+   "model": "rule_R1",
+   "threshold": 1.0,
+   "n": 108,
+   "positives": 40,
+   "tp": 33,
+   "fp": 23,
+   "fn": 7,
+   "tn": 45,
+   "precision": 0.589,
+   "recall": 0.825,
+   "f1": 0.688,
+   "f1_ci95": [
+    0.575,
+    0.784
+   ],
+   "recall_ci95": [
+    0.694,
+    0.933
+   ],
+   "alert_rate_by_family": {
+    "benign_bulk_text_edit": "0/4",
+    "benign_copy_compressed": "0/4",
+    "benign_editor_atomic_save": "0/20",
+    "benign_gzip_inplace": "4/4",
+    "benign_media_resync": "19/20",
+    "benign_rm_tree": "0/4",
+    "benign_tar_backup": "0/4",
+    "benign_unzip_media": "0/4",
+    "benign_zip_archive": "0/4",
+    "sim_mixed": "0/4",
+    "sim_overwrite": "4/4",
+    "sim_rename_overwrite": "4/4",
+    "sim_slow": "1/4",
+    "sim_tmp_rename_replace": "20/20",
+    "sim_write_new_delete": "4/4"
+   },
+   "ops_before_detection_median": {
+    "sim_overwrite": 20.0,
+    "sim_rename_overwrite": 10.0,
+    "sim_slow": 20.0,
+    "sim_tmp_rename_replace": 20.0,
+    "sim_write_new_delete": 19.5
+   }
+  },
+  "lr": {
+   "model": "lr",
+   "threshold": 0.9999999996212388,
+   "n": 108,
+   "positives": 40,
+   "tp": 17,
+   "fp": 4,
+   "fn": 23,
+   "tn": 64,
+   "precision": 0.81,
+   "recall": 0.425,
+   "f1": 0.557,
+   "f1_ci95": [
+    0.407,
+    0.698
+   ],
+   "recall_ci95": [
+    0.276,
+    0.578
+   ],
+   "alert_rate_by_family": {
+    "benign_bulk_text_edit": "0/4",
+    "benign_copy_compressed": "0/4",
+    "benign_editor_atomic_save": "0/20",
+    "benign_gzip_inplace": "0/4",
+    "benign_media_resync": "4/20",
+    "benign_rm_tree": "0/4",
+    "benign_tar_backup": "0/4",
+    "benign_unzip_media": "0/4",
+    "benign_zip_archive": "0/4",
+    "sim_mixed": "4/4",
+    "sim_overwrite": "4/4",
+    "sim_rename_overwrite": "4/4",
+    "sim_slow": "4/4",
+    "sim_tmp_rename_replace": "1/20",
+    "sim_write_new_delete": "0/4"
+   },
+   "ops_before_detection_median": {
+    "sim_mixed": 15.0,
+    "sim_overwrite": 10.5,
+    "sim_rename_overwrite": 4.0,
+    "sim_slow": 10.5,
+    "sim_tmp_rename_replace": 59.0
+   },
+   "pr_auc": 0.733,
+   "pr_auc_ci95": [
+    0.609,
+    0.842
+   ],
+   "brier_trace_level": 0.284,
+   "note": "max-over-windows probability is not calibrated per trace"
+  },
+  "iso": {
+   "model": "iso",
+   "threshold": 0.662379862383349,
+   "n": 108,
+   "positives": 40,
+   "tp": 21,
+   "fp": 37,
+   "fn": 19,
+   "tn": 31,
+   "precision": 0.362,
+   "recall": 0.525,
+   "f1": 0.429,
+   "f1_ci95": [
+    0.283,
+    0.545
+   ],
+   "recall_ci95": [
+    0.364,
+    0.686
+   ],
+   "alert_rate_by_family": {
+    "benign_bulk_text_edit": "0/4",
+    "benign_copy_compressed": "4/4",
+    "benign_editor_atomic_save": "20/20",
+    "benign_gzip_inplace": "4/4",
+    "benign_media_resync": "5/20",
+    "benign_rm_tree": "4/4",
+    "benign_tar_backup": "0/4",
+    "benign_unzip_media": "0/4",
+    "benign_zip_archive": "0/4",
+    "sim_mixed": "4/4",
+    "sim_overwrite": "4/4",
+    "sim_rename_overwrite": "4/4",
+    "sim_slow": "4/4",
+    "sim_tmp_rename_replace": "1/20",
+    "sim_write_new_delete": "4/4"
+   },
+   "ops_before_detection_median": {
+    "sim_mixed": 1.0,
+    "sim_overwrite": 1.0,
+    "sim_rename_overwrite": 1.0,
+    "sim_slow": 1.0,
+    "sim_tmp_rename_replace": 0.0,
+    "sim_write_new_delete": 1.0
+   },
+   "pr_auc": 0.369,
+   "pr_auc_ci95": [
+    0.276,
+    0.487
+   ],
+   "note": "anomaly score, not a probability"
+  }
+ }
+}

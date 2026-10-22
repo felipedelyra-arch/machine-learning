@@ -70,3 +70,22 @@ Revisão da rodada 2 (Sonnet): **reprovado**. Os dois altos da rodada 1 foram co
 Resultado: 41/41 testes; bateria com 13 cenários × 3 sementes = 39/39 conforme o esperado (`evidence/scenarios-20261022-051252.*`).
 
 As correções da rodada 3 ainda **não têm revisão independente**. Elas entram na revisão de arquitetura/sistema integrado do próximo marco.
+
+## Rodada 4 — revisão das correções da rodada 3 + arquitetura
+- Revisão (Sonnet): o escopo A foi reprovado por 1 evasão reproduzida (estado obsoleto por caminho após overflow, fallback para path_key).
+- Corrigido:
+  - inode conhecido ⇒ path_key não é consultado;
+  - overflow limpa o estado de novidade;
+  - limpeza por prefixo de diretório;
+  - unsampled `no_modify_seen` conta;
+  - `quality` em conjunto fechado.
+- Re-revisão: **aprovado**.
+- O escopo B virou `docs/threat-model.md`.
+- Benchmark (`scripts/bench_sensor.py`): achou um O(n²) na janela (corrigido, CPU −60%) e perda acima de ~3–4 mil ops/s com saúde degraded (ADR 0002).
+- 68 → 87 testes (com mail). Bateria: 39/39.
+
+## ML baseline v1 (Marco C)
+- Divisão pré-registrada, teste avaliado uma vez (`evidence/ml-eval-20261022-055045.json`).
+- R1 F1 0,69 vs LR 0,56 vs IsolationForest 0,43.
+- A LR falha na família reservada.
+- **Modelo não promovido.** Ver `docs/model-card-ransomware-lr-v1.md`.

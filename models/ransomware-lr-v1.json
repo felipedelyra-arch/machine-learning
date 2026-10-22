@@ -1,0 +1,49 @@
+{
+ "kind": "logistic_regression",
+ "version": 1,
+ "features": [
+  "overwrite",
+  "write_new",
+  "rename_existing",
+  "replace",
+  "delete_existing",
+  "high_entropy_writes",
+  "unsampled_writes",
+  "high_entropy_ratio"
+ ],
+ "mean": [
+  1.6279568836610734,
+  2.716664115001885,
+  0.6683962114635226,
+  0.0,
+  1.9407031021385968,
+  3.69921290723143,
+  0.0,
+  0.8104150379683707
+ ],
+ "scale": [
+  2.112874403577789,
+  2.3414004769856933,
+  1.6699920918133238,
+  1.0,
+  2.3633132672284964,
+  1.9166569331106664,
+  1.0,
+  0.3893544256192371
+ ],
+ "coef": [
+  2.3887569902139836,
+  -21.59364867626842,
+  10.598347818555034,
+  0.0,
+  2.734249154124831,
+  16.611003940929205,
+  0.0,
+  2.1735857056684877
+ ],
+ "intercept": 11.623530152346452,
+ "threshold": 0.9999999996212388,
+ "trained_on": "75cec0c6dec650fe6d3305fd8784b3f4be0625cc7e8fa8eb3a04d9469af3f178",
+ "sklearn": "1.7.2",
+ "data": "synthetic traces v1; engineering baseline, efficacy NOT demonstrated"
+}
