@@ -13,12 +13,14 @@ import select
 import struct
 import time
 
+from ..features import sample_entropy
 from ..schema import FileEvent
 
 IN_MODIFY, IN_CLOSE_WRITE, IN_MOVED_FROM, IN_MOVED_TO = 0x2, 0x8, 0x40, 0x80
 IN_CREATE, IN_DELETE, IN_DELETE_SELF, IN_Q_OVERFLOW, IN_IGNORED, IN_ISDIR = 0x100, 0x200, 0x400, 0x4000, 0x8000, 0x40000000
 IN_NONBLOCK, IN_CLOEXEC = 0o4000, 0o2000000
-MASK = IN_CLOSE_WRITE | IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF
+IN_ONLYDIR, IN_DONT_FOLLOW = 0x01000000, 0x02000000
+MASK = IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF
 HDR = struct.Struct("iIII")
 MAP = {IN_CLOSE_WRITE: "close_write", IN_MOVED_FROM: "rename_from", IN_MOVED_TO: "rename_to",
        IN_CREATE: "create", IN_DELETE: "delete"}
@@ -46,6 +48,7 @@ class InotifySensor:
         libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
         self._add = libc.inotify_add_watch
         self._add.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+        self._rm = libc.inotify_rm_watch
         self.fd = libc.inotify_init1(IN_NONBLOCK | IN_CLOEXEC)
         if self.fd < 0:
             raise OSError(ctypes.get_errno(), "inotify_init1 failed")
@@ -54,6 +57,7 @@ class InotifySensor:
         self.wds: dict[int, str] = {}
         self.health, self.causes = "initializing", []
         self.dropped = 0
+        self.modified: set[str] = set()   # IN_MODIFY coalesced: close_write only counts if data changed
         self._watch_tree(self.root)
         if self.health == "initializing":
             self.health = "limited"   # observational sensor without process attribution
@@ -64,9 +68,7 @@ class InotifySensor:
             self.causes.append(cause)
 
     def _watch(self, path: str):
-        if len(self.wds) >= self.max_dirs:
-            return self._degrade(f"max_dirs {self.max_dirs} reached; subtree unwatched")
-        wd = self._add(self.fd, os.fsencode(path), MASK)
+        wd = self._add(self.fd, os.fsencode(path), MASK | IN_ONLYDIR | IN_DONT_FOLLOW)
         if wd < 0:
             err = ctypes.get_errno()
             if err == errno.ENOSPC:
@@ -74,14 +76,18 @@ class InotifySensor:
             if err not in (errno.ENOENT, errno.ENOTDIR):
                 self._degrade(f"add_watch {path}: {os.strerror(err)}")
             return
-        self.wds[wd] = path
+        if wd not in self.wds and len(self.wds) >= self.max_dirs:
+            self._rm(self.fd, wd)
+            return self._degrade(f"max_dirs {self.max_dirs} reached; subtree unwatched")
+        self.wds[wd] = path   # same wd re-added (moved dir) -> path update, not a new watch
 
     def _watch_tree(self, top: str):
         self._watch(top)
         for d, dirs, _ in os.walk(top, onerror=lambda e: self._degrade(f"walk: {e}")):
-            # never descend through symlinks (os.walk default followlinks=False)
+            # os.walk lists dir symlinks in `dirs` without descending; never watch their targets
             for sub in dirs:
-                self._watch(os.path.join(d, sub))
+                if not os.path.islink(os.path.join(d, sub)):
+                    self._watch(os.path.join(d, sub))
 
     def read(self, timeout: float = 0.5) -> list[FileEvent]:
         r, _, _ = select.select([self.fd], [], [], timeout)
@@ -107,10 +113,18 @@ class InotifySensor:
                 if mask & (IN_CREATE | IN_MOVED_TO):
                     self._watch_tree(path)   # new dir: files created before the watch lands are missed (race)
                 continue
+            if mask & IN_MODIFY:
+                if len(self.modified) < 100_000:   # ponytail: cap; beyond it unmodified closes are dropped
+                    self.modified.add(path)
+                continue
+            if mask & IN_CLOSE_WRITE:
+                if path not in self.modified:
+                    continue        # opened for write but nothing written (e.g. O_RDWR probe)
+                self.modified.discard(path)
             act = next((a for bit, a in MAP.items() if mask & bit), None)
             if act is None:
                 continue
-            dev = ino = None
+            dev = ino = ent = None
             q = QUALITY
             if act not in ("delete", "rename_from"):
                 try:
@@ -118,8 +132,10 @@ class InotifySensor:
                     dev, ino = st.st_dev, st.st_ino
                 except OSError:
                     q = QUALITY + ("stat_failed",)
+            if act == "close_write":
+                ent = sample_entropy(path)   # sampled at read, not at write: renamed/deleted-in-between -> None
             out.append(FileEvent(act, path, self.name, "linux", ts_received=now, dev=dev, inode=ino,
-                                 cookie=cookie, quality=q))
+                                 cookie=cookie, quality=q, content_entropy=ent))
         return out
 
     def status(self) -> dict:

@@ -1,0 +1,754 @@
+{
+ "meta": {
+  "ts": "2026-10-22T05:00:38-0300",
+  "git": "a235db7",
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "cpus": 4,
+  "seeds": [
+   1,
+   2,
+   3
+  ],
+  "files_per_lab": 200,
+  "data": "synthetic only"
+ },
+ "results": [
+  {
+   "scenario": "sim_overwrite",
+   "seed": 1,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.104,
+   "features_at_alert": {
+    "overwrite": 20,
+    "write_new": 0,
+    "rename_existing": 0,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_overwrite",
+   "seed": 2,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.104,
+   "features_at_alert": {
+    "overwrite": 20,
+    "write_new": 0,
+    "rename_existing": 0,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_overwrite",
+   "seed": 3,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.105,
+   "features_at_alert": {
+    "overwrite": 20,
+    "write_new": 0,
+    "rename_existing": 0,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_write_new_delete",
+   "seed": 1,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.108,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 20,
+    "rename_existing": 0,
+    "delete_existing": 20,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_write_new_delete",
+   "seed": 2,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.106,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 20,
+    "rename_existing": 0,
+    "delete_existing": 20,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_write_new_delete",
+   "seed": 3,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.108,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 20,
+    "rename_existing": 0,
+    "delete_existing": 20,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_rename_overwrite",
+   "seed": 1,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 19,
+   "seconds_to_alert": 0.109,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 19,
+    "rename_existing": 20,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 19,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_rename_overwrite",
+   "seed": 2,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 19,
+   "seconds_to_alert": 0.109,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 19,
+    "rename_existing": 20,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 19,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_rename_overwrite",
+   "seed": 3,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.107,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 19,
+    "rename_existing": 20,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 19,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_slow_below_threshold",
+   "seed": 1,
+   "expectation": "known_miss",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 18,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_slow_below_threshold",
+   "seed": 2,
+   "expectation": "known_miss",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 18,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "sim_slow_below_threshold",
+   "seed": 3,
+   "expectation": "known_miss",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 18,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_copy_compressed",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 9,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_copy_compressed",
+   "seed": 2,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 9,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_copy_compressed",
+   "seed": 3,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 9,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_bulk_text_edit",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_bulk_text_edit",
+   "seed": 2,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_bulk_text_edit",
+   "seed": 3,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_rm_tree",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_rm_tree",
+   "seed": 2,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_rm_tree",
+   "seed": 3,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_zip_archive",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_zip_archive",
+   "seed": 2,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_zip_archive",
+   "seed": 3,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_tar_backup",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_tar_backup",
+   "seed": 2,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_tar_backup",
+   "seed": 3,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_unzip_media",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 10,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_unzip_media",
+   "seed": 2,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 10,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_unzip_media",
+   "seed": 3,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 1,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 10,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_gzip_inplace",
+   "seed": 1,
+   "expectation": "known_fp",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.01,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 20,
+    "rename_existing": 0,
+    "delete_existing": 20,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_gzip_inplace",
+   "seed": 2,
+   "expectation": "known_fp",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.008,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 20,
+    "rename_existing": 0,
+    "delete_existing": 20,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  },
+  {
+   "scenario": "benign_gzip_inplace",
+   "seed": 3,
+   "expectation": "known_fp",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.009,
+   "features_at_alert": {
+    "overwrite": 0,
+    "write_new": 20,
+    "rename_existing": 0,
+    "delete_existing": 20,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "high_entropy_ratio": 1.0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   }
+  }
+ ]
+}

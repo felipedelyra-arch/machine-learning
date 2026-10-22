@@ -1,0 +1,54 @@
+# Registro de validação
+
+Dados 100% sintéticos. Os resultados exercitam o pipeline e **não** demonstram eficácia contra ransomware real. O sistema só **detecta**, sem conter: após o alerta, o simulador continua até 200/200 arquivos.
+
+Ambiente: Linux Mint 22.3, kernel 7.0.0-38, x86_64, 4 CPUs, Python 3.12.3, sem privilégio. Windows e macOS não foram testados.
+
+## Rodada 1 — incremento 1 (commit a235db7)
+- Testes unitários: 20/20.
+- Bateria: 11 cenários × 3 sementes = 33/33 conforme o esperado (`evidence/scenarios-20261022-050038.*`).
+- Revisão independente (Sonnet, agente `reviewer`): **reprovado**, 12 achados.
+  - Altos: (1) o simulador alterava arquivo por hardlink/symlink/marcador forjado; (2) evasão do R1 por tmp+rename.
+  - Médios:
+    - FIFO derruba o watch;
+    - tipos não validados derrubam o replay;
+    - o replay lia o disco;
+    - `created` era ilimitado/sem expiração;
+    - symlink de diretório era vigiado;
+    - entropia `None` entrava no denominador;
+    - watches de diretório movido.
+  - Baixos: triggers incompletos; status com PID morto ou relógio adiantado; docs inexistentes.
+
+## Rodada 2 — correções
+| Achado | Estado | Verificação |
+|---|---|---|
+| 1 simulador (hardlink, symlink, marcador, `.locked`) | corrigido | `test_hardlink_swap_refused`, `test_symlink_swap_refused`, `test_locked_name_symlink_not_followed`, `test_refuses_forged_marker_dir` |
+| 2 evasão tmp+rename | corrigido | `test_atomic_replace_evasion_detected` + cenário `sim_tmp_rename_replace` |
+| 3 FIFO | corrigido | `test_entropy` (mkfifo → None) |
+| 4 `created` ilimitado | corrigido (TTL 60 s + teto 100k) | `test_created_files_expire_to_preexisting` |
+| 5 tipos do schema | corrigido | `test_rejects_malformed` (+6 casos) |
+| 6 replay lê disco | corrigido (entropia vai no evento) | `test_default_sampler_never_reads_disk` |
+| 7 None no denominador | corrigido; amostragem tardia documentada | `test_unsampled_writes_excluded_from_ratio` |
+| 8 symlink de diretório | corrigido (`IN_DONT_FOLLOW|IN_ONLYDIR`, skip islink) | `test_dir_symlink_not_watched` |
+| 9 overflow / wd repetido | parcial: gap na incerteza, wd repetido = update; dir movido para fora → pendente/documentado | `test_overflow_is_reported_as_coverage_gap` |
+| 10 triggers / 0600 | corrigido | `test_permissions_and_append_only`, `test_existing_db_permissions_tightened` |
+| 11 status | corrigido (pid, relógio) | `test_status_future_heartbeat_is_degraded`, `test_status_dead_pid_is_degraded` |
+| 12 docs / R2 / dedupe | R2 cobre rename_to, com rate limit; docs criados; dedupe só tem efeito em replay (documentado) | `test_canary_atomic_replace` |
+
+Achado novo do coordenador ao rodar a bateria: `IN_CLOSE_WRITE` disparava em abertura `O_RDWR` sem escrita e inflava o contador de sobrescritas. Corrigido com coalescência de `IN_MODIFY` no sensor (`test_open_for_write_without_writing_is_ignored`).
+
+Resultado: 35/35 testes; bateria com 13 cenários × 3 sementes = 39/39 conforme o esperado (`evidence/scenarios-20261022-050736.*`).
+
+| Cenário | Esperado | Ops antes do alerta (sementes 1, 2, 3) | s até o alerta |
+|---|---|---|---|
+| sim_overwrite | alert | 20, 20, 20 | ~0.10 |
+| sim_write_new_delete | alert | 20, 20, 20 | ~0.12 |
+| sim_rename_overwrite | alert | 20, 20, 20 | ~0.10 |
+| sim_tmp_rename_replace | alert | 24, 20, 20 | 0.11–0.14 |
+| sim_slow_below_threshold | known_miss | — | — |
+| 7 cargas benignas | no_alert | — | — |
+| benign_gzip_inplace | known_fp | 20, 20, 20 | ~0.01 |
+
+A variação 24 vs 20 vem da latência entre o simulador e o pump do sensor (o simulador roda a 200 ops/s). Uma amostra de 3 sementes não sustenta nenhuma taxa estatística.
+
+Revisão da rodada 2: pendente.

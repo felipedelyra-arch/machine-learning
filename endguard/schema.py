@@ -1,6 +1,7 @@
 """Versioned event/decision contracts. Everything crossing a layer boundary is validated here."""
 from __future__ import annotations
 
+import math
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -12,6 +13,10 @@ MAX_PATH = 4096
 
 class SchemaError(ValueError):
     pass
+
+
+def _num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
 @dataclass(frozen=True)
@@ -35,6 +40,7 @@ class FileEvent:
     cookie: int = 0                        # links rename_from/rename_to
     process: ProcessRef = ProcessRef()
     quality: tuple[str, ...] = ()          # e.g. "no_process_attribution", "stat_failed"
+    content_entropy: float | None = None   # sampled by the sensor at read time; detector never reads disk
     event_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     schema_version: int = SCHEMA_VERSION
 
@@ -45,8 +51,24 @@ class FileEvent:
             raise SchemaError(f"bad action {self.action!r}")
         if not isinstance(self.path, str) or len(self.path) > MAX_PATH or "\x00" in self.path:
             raise SchemaError("bad path")
-        if not isinstance(self.ts_received, (int, float)):
-            raise SchemaError("bad ts_received")
+        for name in ("sensor", "platform", "event_id"):
+            v = getattr(self, name)
+            if not isinstance(v, str) or not 0 < len(v) <= 128:
+                raise SchemaError(f"bad {name}")
+        for name, opt in (("ts_received", False), ("ts_event", True), ("content_entropy", True)):
+            v = getattr(self, name)
+            if not (opt and v is None) and (not _num(v) or not math.isfinite(v)):
+                raise SchemaError(f"bad {name}")
+        for name in ("dev", "inode", "cookie"):
+            v = getattr(self, name)
+            if not (v is None and name != "cookie") and (not isinstance(v, int) or isinstance(v, bool) or v < 0):
+                raise SchemaError(f"bad {name}")
+        p = self.process
+        if not (p.pid is None or (isinstance(p.pid, int) and not isinstance(p.pid, bool))) or \
+                not (p.start_time is None or _num(p.start_time)) or not (p.exe is None or isinstance(p.exe, str)):
+            raise SchemaError("bad process")
+        if not isinstance(self.quality, tuple) or not all(isinstance(q, str) for q in self.quality):
+            raise SchemaError("bad quality")
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -62,7 +84,10 @@ class FileEvent:
         unknown = set(d) - set(cls.__dataclass_fields__)
         if unknown:
             raise SchemaError(f"unknown fields {sorted(unknown)}")
-        d["quality"] = tuple(d.get("quality", ()))
+        q = d.get("quality", ())
+        if not isinstance(q, (list, tuple)):
+            raise SchemaError("bad quality")
+        d["quality"] = tuple(q)
         try:
             return cls(process=ProcessRef(**proc), **d)
         except TypeError as e:

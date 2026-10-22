@@ -87,6 +87,18 @@ def w_unzip(lab, seed):               # extracting an archive of compressed medi
     return [(time.time(), zp)]
 
 
+def w_editor_atomic_save(lab, seed):  # editors/IDEs: write tmp then rename over original, low entropy
+    log = []
+    for p in txt_files(lab):
+        with open(p) as f:
+            s = f.read()
+        tmp = p + ".swp"
+        with open(tmp, "w") as f:
+            f.write(s + "\nedited")
+        os.replace(tmp, p); stamp(log, p)
+    return log
+
+
 def w_gzip_inplace(lab, seed):        # `gzip -r`: new compressed file + delete original (KNOWN FP)
     log = []
     for p in txt_files(lab):
@@ -105,6 +117,7 @@ SCENARIOS = {
     "sim_overwrite": (sim("overwrite"), "alert"),
     "sim_write_new_delete": (sim("write_new_delete"), "alert"),
     "sim_rename_overwrite": (sim("rename_overwrite"), "alert"),
+    "sim_tmp_rename_replace": (sim("tmp_rename_replace"), "alert"),
     "sim_slow_below_threshold": (sim("overwrite", rate=1.5, max_files=18), "known_miss"),
     "benign_copy_compressed": (w_copy_compressed, "no_alert"),
     "benign_bulk_text_edit": (w_bulk_text_edit, "no_alert"),
@@ -112,6 +125,7 @@ SCENARIOS = {
     "benign_zip_archive": (w_zip_archive, "no_alert"),
     "benign_tar_backup": (w_tar_backup, "no_alert"),
     "benign_unzip_media": (w_unzip, "no_alert"),
+    "benign_editor_atomic_save": (w_editor_atomic_save, "no_alert"),
     "benign_gzip_inplace": (w_gzip_inplace, "known_fp"),
 }
 

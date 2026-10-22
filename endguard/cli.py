@@ -24,7 +24,8 @@ def cmd_watch(a):
     from .sensors.linux_inotify import InotifySensor
     store, sensor = Store(a.db), InotifySensor(a.path)
     det = Detector(canaries=a.canary or (), policy_mode=a.mode)
-    store.add_health(sensor.status())
+    status = lambda: {**sensor.status(), "pid": os.getpid()}  # noqa: E731
+    store.add_health(status())
     print(f"watching {sensor.root} health={sensor.health} (observational, cannot block)", file=sys.stderr)
     deadline = time.monotonic() + a.seconds if a.seconds else None
     last_h = 0.0
@@ -36,7 +37,7 @@ def cmd_watch(a):
                     print(json.dumps({"ALERT" if d.action == "alert" else "LOG": d.summary,
                                       "rule": d.rule_id, "id": d.decision_id}), flush=True)
             if time.monotonic() - last_h > 5:
-                store.add_health(sensor.status())
+                store.add_health(status())
                 last_h = time.monotonic()
     except KeyboardInterrupt:
         pass
@@ -53,7 +54,7 @@ def cmd_replay(a):
         for line in f:
             try:
                 events.append(FileEvent.from_dict(json.loads(line)))
-            except (ValueError, SchemaError):
+            except (ValueError, TypeError, SchemaError):
                 bad += 1
     events.sort(key=lambda e: e.ts_event if e.ts_event is not None else e.ts_received)
     for ev in events:
@@ -61,12 +62,27 @@ def cmd_replay(a):
     _print({"events": len(events), "rejected": bad, "decisions": out})
 
 
+def _alive(pid: int) -> bool:
+    # ponytail: pid liveness only (same host, pid reuse possible); per-sensor ids when multiple watchers share a DB
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    return True
+
+
 def cmd_status(a):
     h = Store(a.db).last_health() if os.path.exists(a.db) else None
     if h is None:
         return _print({"health": "disabled", "causes": ["no sensor has run"]})
-    if h["health"] != "disabled" and time.time() - h["recorded_at"] > STALE_S:
-        h = {**h, "health": "degraded", "causes": h["causes"] + ["no heartbeat: sensor not running?"]}
+    if h["health"] != "disabled":
+        age = time.time() - h["recorded_at"]
+        if age > STALE_S or age < -5:
+            h = {**h, "health": "degraded", "causes": h["causes"] + ["no fresh heartbeat (stale or clock skew)"]}
+        elif h.get("pid") and not _alive(h["pid"]):
+            h = {**h, "health": "degraded", "causes": h["causes"] + [f"sensor process {h['pid']} not running"]}
     _print(h)
 
 

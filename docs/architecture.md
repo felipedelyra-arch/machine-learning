@@ -40,16 +40,26 @@ Fontes: man7.org fanotify(7)/inotify(7); learn.microsoft.com “About file syste
 ## Limites de garantia (atuais)
 - **Só detecção**, nunca prevenção: o alerta chega depois de ~20 arquivos alterados (ver `docs/validation.md`). Sem contenção, o dano continua.
 - Sem atribuição de processo: atividade benigna concorrente soma na janela; não há como apontar/parar o culpado.
-- Evasão conhecida: taxa abaixo de 20 ops destrutivas/10 s; criptografia parcial com baixa entropia na amostra de 4 KiB; arquivos fora da árvore vigiada; diretórios criados entre `mkdir` e o add_watch (corrida).
-- Falso positivo conhecido: `gzip -r`/recompressão in-place.
+- Evasões conhecidas do R1 (abertas):
+  - taxa abaixo de 20 ops destrutivas/10 s;
+  - cifrar só parte do arquivo, mantendo baixa entropia nos primeiros 4 KiB;
+  - arquivos < ~150 B (a entropia não chega a 7.2);
+  - diluição da razão com escritas de baixa entropia;
+  - wipers que só apagam (sem escrita de alta entropia o R1 não dispara; o R1 é voltado à criptografia);
+  - arquivos fora da árvore vigiada e diretórios movidos para dentro dela (seus arquivos não geram eventos);
+  - corrida entre `mkdir` e `add_watch`;
+  - backlog: a entropia é amostrada na leitura do evento, e um arquivo já renomeado/apagado fica "unsampled" (fora da razão, mas ainda conta como destrutivo).
+- Evasão corrigida: "grava temporário + rename por cima" (`replace`), coberta desde a v2 da regra.
+- Falsos positivos conhecidos: `gzip -r`/recompressão in-place; `rename_to` de arquivo criado na sessão para um nome novo (ex.: `.part`→final) conta como `replace`, porque o inotify não informa se o destino existia.
+- Limites do sensor: `close_write` só conta se houve `IN_MODIFY` (abrir para escrita sem escrever é ignorado); diretório movido para fora da árvore mantém o watch com caminho antigo; um overflow deixa a saúde em degraded até reiniciar e entra na incerteza das decisões.
 - Fora de alcance: kernel/firmware, rootkits, malware dormente, invasor com privilégio igual ou superior.
 
 ## Modelo de ameaças (resumo; detalhar no Marco A2)
 | Ativo | Ameaça | Mitigação atual | Pendente |
 |---|---|---|---|
-| Fluxo de eventos | evento malformado/injetado via replay | schema estrito (campos, ação, NUL, tamanho, versão) | assinatura de replays |
-| Leitura de conteúdo | symlink trocado entre evento e amostra (TOCTOU) | `O_NOFOLLOW|O_NONBLOCK`, só 4 KiB | descritor do próprio evento (fanotify) |
-| Auditoria | adulteração | 0600 + trigger append-only | cadeia de hash; export remoto opcional |
-| Simulador | uso contra dados reais | só arquivos que criou, em tmp com marcador, limites de qtd/bytes/tempo, bytes aleatórios | — |
-| Status | “protegido” falso | heartbeat; >30 s sem heartbeat ⇒ degraded | — |
+| Leitura de conteúdo | symlink trocado (TOCTOU), FIFO para travar/derrubar o sensor | `O_NOFOLLOW|O_NONBLOCK`, `S_ISREG`, erros → None, só 4 KiB; o detector nunca lê disco (replay determinístico) | componentes intermediários do caminho ainda seguem symlink → usar o fd do evento (fanotify) |
+| Auditoria | adulteração | 0600 (inclusive em DB pré-existente), `O_NOFOLLOW`, triggers impedem UPDATE/DELETE nas duas tabelas — barreira contra bugs, **não** contra o dono do arquivo | cadeia de hash; export remoto opcional |
+| Simulador | uso contra dados reais | só (dev,inode) criados pelo próprio processo (registro em memória, não no disco), `O_NOFOLLOW`/`O_EXCL`, `st_nlink==1`, dono, lab 0700 direto em tmp, limites, bytes aleatórios | — |
+| Status | “protegido” falso | heartbeat; >30 s, relógio adiantado ou PID morto ⇒ degraded | ids por sensor quando houver vários watchers |
+| Replay | evento hostil derruba/sonda | tipos estritos no schema; linha inválida é rejeitada e contada | assinatura de replays |
 | Executor/IPC/atualização/ML | — | não existem ainda | revisar antes de existirem |
