@@ -89,3 +89,29 @@ As correções da rodada 3 ainda **não têm revisão independente**. Elas entra
 - R1 F1 0,69 vs LR 0,56 vs IsolationForest 0,43.
 - A LR falha na família reservada.
 - **Modelo não promovido.** Ver `docs/model-card-ransomware-lr-v1.md`.
+
+## Analisador .eml (Marco E, parte 1) — 2 revisões + correção do coordenador
+- Autor: implementer (Sonnet). Revisor: reviewer (Sonnet, outro agente). Revisão direta do coordenador: fuzz por mutação (3000 casos, 0 exceções) + entradas patológicas. **Não** pegou os DoS abaixo: só a revisão independente encontrou.
+- **R1: reprovado.** Altos:
+  - RecursionError virava mensagem benigna;
+  - limite de partes aplicado depois do parse (82 s / 215 MB);
+  - cabeçalho de endereço cúbico (80 KB → 58 s);
+  - veredito ignorava limites.
+  - Médios: evasões de extensão (`a.exe .`, NUL, `:`, bidi) e AR "primeiro resultado vence".
+- **R2: reprovado.** Os altos 1, 3 e 4 foram fechados. Ficou o bypass da pré-checagem por CR puro (73 s) e o crash de `start()`. A CLI usava a versão não isolada; o resultado do filho era pickle.
+- **Correção do coordenador** (limite de 2 rodadas atingido):
+  - fins de linha normalizados antes de contar;
+  - bloco de cabeçalho por linhas;
+  - `started` flag;
+  - resultado do filho em JSON com tamanho máximo;
+  - a CLI usa `analyze_eml_isolated`.
+  - Repro do revisor: 73 s → 0,05 s.
+- 91/91 testes; bateria 39/39 no candidato.
+- **Sem revisão independente** desta última correção. Entra na revisão do sistema integrado.
+- Limites aceitos:
+  - `analyze_eml` direto não tem teto de tempo (só a versão isolada tem);
+  - RLIMIT_AS não é sandbox (mesmo uid, sem seccomp);
+  - no Windows só existe o timeout;
+  - `(` não fechado no AR descarta o resto (neutro);
+  - homógrafos fora de punycode/não-ASCII, `[dot]` e espaçamento escapam;
+  - **não é proteção da caixa de entrada**: só análise offline de arquivo.

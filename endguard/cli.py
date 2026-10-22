@@ -90,6 +90,16 @@ def cmd_decisions(a):
     _print(Store(a.db).decisions(a.limit) if os.path.exists(a.db) else [])
 
 
+def cmd_mail(a):
+    from .mail import MAX_BYTES, analyze_eml_isolated
+    with open(a.file, "rb") as f:
+        data = f.read(MAX_BYTES + 1)
+    try:
+        _print(analyze_eml_isolated(data, frozenset(a.trusted_authserv or ())))
+    except ValueError as e:
+        sys.exit(f"endguard mail: {e}")
+
+
 def cmd_simulate(a):
     lab = simulator.make_lab(a.files, a.seed)
     print(f"lab={lab}", file=sys.stderr, flush=True)
@@ -110,6 +120,10 @@ def main(argv=None):
         x.add_argument("--canary", action="append")
     sub.add_parser("status")
     d = sub.add_parser("decisions"); d.add_argument("--limit", type=int, default=20)
+    m = sub.add_parser("mail", help="offline .eml analysis (not inbox protection)")
+    m.add_argument("file")
+    m.add_argument("--trusted-authserv", action="append",
+                   help="authserv-id of YOUR receiving MTA; other Authentication-Results are ignored")
     s = sub.add_parser("simulate")
     s.add_argument("--variant", choices=simulator.VARIANTS, default="overwrite")
     s.add_argument("--files", type=int, default=200); s.add_argument("--seed", type=int, default=1)
