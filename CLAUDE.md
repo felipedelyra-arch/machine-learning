@@ -6,3 +6,4 @@
 - Diferenciar sempre observação / detecção / bloqueio / contenção / recuperação. Sensor sem permissão ou com perda = "degraded", nunca "protegido".
 - Testes: `python3 -m unittest discover -s tests -t .` (afetados por incremento); bateria: `python3 scripts/run_scenarios.py --seeds 1 2 3`.
 - Agentes: researcher (Haiku), implementer/validator/reviewer (Sonnet). Máx. 2 em paralelo, 1 nível. Autor não aprova o próprio diff.
+- **Decisão do usuário, permanente**: nunca sudo/privilégio, VMs, malware real, caixa de e-mail real nem redução de segurança do PC. Não pedir de novo.

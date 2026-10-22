@@ -14,4 +14,8 @@
 5. Marco E parte 2: primeira integração real de e-mail (IMAP/Gmail/M365) — **precisa de autorização e escolha do provedor**.
 6. Windows/macOS: sem máquina ou VM; precisa de equipamento/VMs.
 
+**Decisão do usuário (22/10/2026), permanente**: NUNCA usar sudo/privilégio, VMs, amostras reais de malware, acesso à caixa de e-mail real, nem nada que reduza a segurança do PC.
+- Consequência: escopo = Linux sem privilégio (só observação/detecção, sem atribuição de processo nem bloqueio).
+- fanotify, ETW, Endpoint Security, contenção e integrações reais ficam fora até nova decisão explícita.
+
 **Bloqueios**: sem sudo; sem Windows/macOS; agentes do projeto em `.claude/agents/` só carregam após reiniciar a sessão (por ora os globais são usados com override `model: sonnet`).
