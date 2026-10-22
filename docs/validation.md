@@ -131,3 +131,11 @@ As correções da rodada 3 ainda **não têm revisão independente**. Elas entra
   - DB aberto read-only (`mode=ro`);
   - join da thread leitora.
 - TUI (`endguard tui`, curses, somente leitura): smoke em pty real ok; 106/106 testes.
+
+## ML v2 (pré-registrado; teste inédito de 204 traços, avaliado uma vez — `evidence/ml-eval-v2-20261022-062220.json`)
+- R1: recall 0,62, 36 FP.
+- LR v2: precisão 1,00, recall 0,71, 0 FP.
+- Ensemble: recall 0,99, 36 FP; ganho IC95 [0,27; 0,48].
+- **O critério pré-registrado foi atendido.**
+- **A sonda exploratória** (salvar no lugar 2 JPEGs existentes) **dispara a LR em 3/3** → lacuna de dados → **não promovido**. Ver `docs/model-card-ransomware-lr-v2.md`.
+- Incidente de execução: um bug no `grid()` (ordem do `sim_burst_pause`) abortou a gravação no traço 72. Foi corrigido e a gravação retomada. Nenhum resultado foi aberto antes do teste completo.

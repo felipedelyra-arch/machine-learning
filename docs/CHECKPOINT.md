@@ -1,18 +1,19 @@
 # Checkpoint (22/10/2026)
 
-**Concluído**:
+**Concluído** (até 4b89604+):
+- Marcos B, C (v1 e v2 avaliados; nada promovido), E parte 1 (mail offline isolado), TUI.
+- Revisão integrada aprovada.
+
+**Concluído antes**:
 - Marco A parcial: arquitetura, matriz de capacidades e resumo de ameaças.
 - Marco B parcial: schema, sensor inotify, regras R1/R2, auditoria, CLI, replay, simulador seguro e bateria.
 - 3 rodadas de correção e teste, com 2 revisões independentes; ver `docs/validation.md`.
 
 **Pendente (próxima ação primeiro)**:
-1. Revisão do sistema integrado (inclui a última correção do mail.py, ainda sem revisão independente).
-   - Feito até aqui: Marco B (núcleo Linux); Marco C v1 (LR não promovida); Marco E parte 1 (`endguard mail`, offline e isolado).
-2. Modelo de ameaças completo + revisão de arquitetura antes de existir executor/IPC.
-3. fanotify (exige root ou CAP_SYS_ADMIN: **autorização do usuário**) para atribuir processo e mediar aberturas.
-4. Marco C v2: novo pré-registro, features de taxa, calibração, ensemble R1+LR (o teste v1 já foi consumido).
-5. Marco E parte 2: primeira integração real de e-mail (IMAP/Gmail/M365) — **precisa de autorização e escolha do provedor**.
-6. Windows/macOS: sem máquina ou VM; precisa de equipamento/VMs.
+1. ML v3: novo pré-registro com famílias benignas de sobrescrita in-place de alta entropia (a lacuna revelada pela sonda v2).
+2. Revisão independente das últimas correções da TUI (ainda sem 3ª revisão).
+3. Coletor nativo (ADR 0002) para throughput, se for desejado. Sem privilégio, ele só melhora a observação.
+4. Windows/macOS: sem teste nativo por decisão do usuário (sem VM). Ficam como não suportados.
 
 **Decisão do usuário (22/10/2026), permanente**: NUNCA usar sudo/privilégio, VMs, amostras reais de malware, acesso à caixa de e-mail real, nem nada que reduza a segurança do PC.
 - Consequência: escopo = Linux sem privilégio (só observação/detecção, sem atribuição de processo nem bloqueio).

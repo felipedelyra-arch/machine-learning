@@ -1,0 +1,183 @@
+{
+ "meta": {
+  "ts": "2026-10-22T06:22:20-0300",
+  "sklearn": "1.7.2",
+  "threshold_calibrated": 0.593,
+  "sizes": {
+   "train": 210,
+   "val": 90,
+   "test": 204,
+   "test_pos": 84
+  },
+  "recall_gain_ensemble_vs_R1_ci95": [
+   0.267,
+   0.477
+  ],
+  "promotion_rule_met": true,
+  "coef": {
+   "overwrite@10s": 0.427,
+   "write_new@10s": -6.006,
+   "rename_existing@10s": 0.172,
+   "replace@10s": 2.163,
+   "delete_existing@10s": 0.042,
+   "high_entropy_writes@10s": 2.898,
+   "unsampled_writes@10s": -1.473,
+   "high_entropy_ratio@10s": 0.979,
+   "overwrite@60s": 0.298,
+   "write_new@60s": -4.766,
+   "rename_existing@60s": -5.373,
+   "replace@60s": 0.705,
+   "delete_existing@60s": 0.702,
+   "high_entropy_writes@60s": 5.939,
+   "unsampled_writes@60s": 4.057,
+   "high_entropy_ratio@60s": 1.019
+  }
+ },
+ "results": {
+  "rule_R1": {
+   "model": "rule_R1",
+   "tp": 52,
+   "fp": 36,
+   "fn": 32,
+   "tn": 84,
+   "precision": 0.591,
+   "recall": 0.619,
+   "fpr": 0.3,
+   "by_family": {
+    "benign_backup_rotate": "12/12",
+    "benign_bulk_text_edit": "0/12",
+    "benign_copy_compressed": "0/12",
+    "benign_editor_atomic_save": "0/12",
+    "benign_gzip_inplace": "12/12",
+    "benign_media_resync": "12/12",
+    "benign_rm_tree": "0/12",
+    "benign_tar_backup": "0/12",
+    "benign_unzip_media": "0/12",
+    "benign_zip_archive": "0/12",
+    "sim_burst_pause": "0/12",
+    "sim_mixed": "4/12",
+    "sim_overwrite": "12/12",
+    "sim_rename_overwrite": "12/12",
+    "sim_slow": "1/12",
+    "sim_tmp_rename_replace": "11/12",
+    "sim_write_new_delete": "12/12"
+   },
+   "ops_before_detection_median": {
+    "sim_mixed": 31.0,
+    "sim_overwrite": 20.0,
+    "sim_rename_overwrite": 10.0,
+    "sim_slow": 20.0,
+    "sim_tmp_rename_replace": 19.0,
+    "sim_write_new_delete": 20.0
+   }
+  },
+  "lr_v2": {
+   "model": "lr_v2",
+   "tp": 60,
+   "fp": 0,
+   "fn": 24,
+   "tn": 120,
+   "precision": 1.0,
+   "recall": 0.714,
+   "fpr": 0.0,
+   "by_family": {
+    "benign_backup_rotate": "0/12",
+    "benign_bulk_text_edit": "0/12",
+    "benign_copy_compressed": "0/12",
+    "benign_editor_atomic_save": "0/12",
+    "benign_gzip_inplace": "0/12",
+    "benign_media_resync": "0/12",
+    "benign_rm_tree": "0/12",
+    "benign_tar_backup": "0/12",
+    "benign_unzip_media": "0/12",
+    "benign_zip_archive": "0/12",
+    "sim_burst_pause": "12/12",
+    "sim_mixed": "12/12",
+    "sim_overwrite": "12/12",
+    "sim_rename_overwrite": "12/12",
+    "sim_slow": "12/12",
+    "sim_tmp_rename_replace": "0/12",
+    "sim_write_new_delete": "0/12"
+   },
+   "ops_before_detection_median": {
+    "sim_burst_pause": 2.0,
+    "sim_mixed": 3.0,
+    "sim_overwrite": 2.0,
+    "sim_rename_overwrite": 6.0,
+    "sim_slow": 2.0
+   },
+   "pr_auc": 0.902,
+   "brier": 0.112,
+   "reliability": [
+    {
+     "bin": "0.0-0.2",
+     "n": 102,
+     "mean_pred": 0.098,
+     "frac_pos": 0.147
+    },
+    {
+     "bin": "0.2-0.4",
+     "n": 26,
+     "mean_pred": 0.289,
+     "frac_pos": 0.231
+    },
+    {
+     "bin": "0.4-0.6",
+     "n": 16,
+     "mean_pred": 0.514,
+     "frac_pos": 0.188
+    },
+    {
+     "bin": "0.6-0.8",
+     "n": 12,
+     "mean_pred": 0.703,
+     "frac_pos": 1.0
+    },
+    {
+     "bin": "0.8-1.0",
+     "n": 48,
+     "mean_pred": 0.999,
+     "frac_pos": 1.0
+    }
+   ]
+  },
+  "ensemble_R1_or_lr": {
+   "model": "ensemble",
+   "tp": 83,
+   "fp": 36,
+   "fn": 1,
+   "tn": 84,
+   "precision": 0.697,
+   "recall": 0.988,
+   "fpr": 0.3,
+   "by_family": {
+    "benign_backup_rotate": "12/12",
+    "benign_bulk_text_edit": "0/12",
+    "benign_copy_compressed": "0/12",
+    "benign_editor_atomic_save": "0/12",
+    "benign_gzip_inplace": "12/12",
+    "benign_media_resync": "12/12",
+    "benign_rm_tree": "0/12",
+    "benign_tar_backup": "0/12",
+    "benign_unzip_media": "0/12",
+    "benign_zip_archive": "0/12",
+    "sim_burst_pause": "12/12",
+    "sim_mixed": "12/12",
+    "sim_overwrite": "12/12",
+    "sim_rename_overwrite": "12/12",
+    "sim_slow": "12/12",
+    "sim_tmp_rename_replace": "11/12",
+    "sim_write_new_delete": "12/12"
+   },
+   "ops_before_detection_median": {
+    "sim_burst_pause": 2.0,
+    "sim_mixed": 3.0,
+    "sim_overwrite": 2.0,
+    "sim_rename_overwrite": 6.0,
+    "sim_slow": 2.0,
+    "sim_tmp_rename_replace": 19.0,
+    "sim_write_new_delete": 20.0
+   }
+  }
+ }
+}
