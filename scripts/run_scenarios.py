@@ -130,19 +130,26 @@ SCENARIOS = {
 }
 
 
-def run_one(name, seed):
-    work, expect = SCENARIOS[name]
-    lab = simulator.make_lab(N, seed)
+def run_one(name, seed, work=None, expect=None, n=N, setup=None, events_out=None):
+    """events_out: optional list that receives every raw FileEvent (trace recording)."""
+    if work is None:
+        work, expect = SCENARIOS[name]
+    lab = simulator.make_lab(n, seed)
+    if setup:
+        setup(lab, seed)              # runs before the sensor: its files are pre-existing
     sensor = InotifySensor(lab)
     det = Detector(policy_mode="alert")
     decisions, stop = [], threading.Event()
 
     def pump():
-        while not stop.is_set():
-            for ev in sensor.read(0.1):
+        while True:
+            evs = sensor.read(0.1 if not stop.is_set() else 0.3)
+            for ev in evs:
                 decisions.extend(det.feed(ev))
-        for ev in sensor.read(0.3):       # final drain
-            decisions.extend(det.feed(ev))
+                if events_out is not None:
+                    events_out.append(ev)
+            if stop.is_set() and not evs:   # drain until quiet
+                break
 
     th = threading.Thread(target=pump); th.start()
     t0 = time.time()
@@ -163,7 +170,7 @@ def run_one(name, seed):
         "ops_before_alert": sum(1 for ts, _ in log if first and ts < first.ts) if first else None,
         "seconds_to_alert": round(first.ts - t0, 3) if first else None,
         "features_at_alert": first.features if first else None,
-        "sensor": st,
+        "sensor": st, "t0": t0, "op_log": log if events_out is not None else None,
     }
 
 

@@ -9,6 +9,8 @@ from dataclasses import asdict, dataclass, field
 SCHEMA_VERSION = 1
 ACTIONS = {"create", "close_write", "modify", "rename_from", "rename_to", "delete", "overflow"}
 MAX_PATH = 4096
+QUALITY_FLAGS = {"no_process_attribution", "no_kernel_timestamp", "stat_failed", "multi_link",
+                 "no_modify_seen", "replayed"}
 
 
 class SchemaError(ValueError):
@@ -67,7 +69,7 @@ class FileEvent:
         if not (p.pid is None or (isinstance(p.pid, int) and not isinstance(p.pid, bool))) or \
                 not (p.start_time is None or _num(p.start_time)) or not (p.exe is None or isinstance(p.exe, str)):
             raise SchemaError("bad process")
-        if not isinstance(self.quality, tuple) or not all(isinstance(q, str) for q in self.quality):
+        if not isinstance(self.quality, tuple) or not all(q in QUALITY_FLAGS for q in self.quality):
             raise SchemaError("bad quality")
 
     def to_dict(self) -> dict:

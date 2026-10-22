@@ -1,0 +1,66 @@
+{
+ "meta": {
+  "ts": "2026-10-22T05:20:57-0300",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "cpus": 4,
+  "python": "3.12.3",
+  "max_rss_mb": 29.3,
+  "note": "writer in separate process; latency = op start -> event processed by detector"
+ },
+ "results": [
+  {
+   "ops": 2000,
+   "write_wall_s": 0.101,
+   "ops_per_s": 19770,
+   "events_matched": 2000,
+   "ops_without_event": 0,
+   "latency_ms": {
+    "p50": 414.145,
+    "p95": 853.716,
+    "p99": 880.456,
+    "max": 886.91
+   },
+   "sensor_thread_cpu_s": 0.985,
+   "cpu_ms_per_1k_ops": 492.7,
+   "decisions": 0,
+   "health": "limited",
+   "overflows": 0
+  },
+  {
+   "ops": 10000,
+   "write_wall_s": 0.638,
+   "ops_per_s": 15672,
+   "events_matched": 6701,
+   "ops_without_event": 3299,
+   "latency_ms": {
+    "p50": 3058.106,
+    "p95": 7043.597,
+    "p99": 7468.779,
+    "max": 7549.88
+   },
+   "sensor_thread_cpu_s": 7.959,
+   "cpu_ms_per_1k_ops": 795.9,
+   "decisions": 0,
+   "health": "degraded",
+   "overflows": 1
+  },
+  {
+   "ops": 30000,
+   "write_wall_s": 2.353,
+   "ops_per_s": 12750,
+   "events_matched": 7621,
+   "ops_without_event": 22379,
+   "latency_ms": {
+    "p50": 4176.836,
+    "p95": 8596.824,
+    "p99": 8944.996,
+    "max": 9057.52
+   },
+   "sensor_thread_cpu_s": 10.829,
+   "cpu_ms_per_1k_ops": 361.0,
+   "decisions": 0,
+   "health": "degraded",
+   "overflows": 1
+  }
+ ]
+}

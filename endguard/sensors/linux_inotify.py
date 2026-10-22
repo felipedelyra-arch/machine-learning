@@ -114,6 +114,9 @@ class InotifySensor:
             if mask & IN_ISDIR:
                 if mask & (IN_CREATE | IN_MOVED_TO):
                     self._watch_tree(path)   # new dir: files created before the watch lands are missed (race)
+                elif mask & (IN_DELETE | IN_MOVED_FROM):
+                    pre = path + os.sep
+                    self.modified = {m for m in self.modified if not m.startswith(pre)}
                 continue
             if mask & IN_MODIFY:
                 if len(self.modified) >= MAX_MODIFIED:

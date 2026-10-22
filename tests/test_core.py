@@ -40,6 +40,7 @@ class SchemaTests(unittest.TestCase):
                     {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "schema_version": 99},
                     {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "process": {"cmd": "rm"}},
                     {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "quality": 5},
+                    {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "quality": ["trusted_by_admin"]},
                     {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "ts_event": "1"},
                     {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "event_id": [1]},
                     {"action": "create", "path": "/x", "sensor": "s", "platform": "linux", "inode": -1},
@@ -130,6 +131,32 @@ class DetectorTests(unittest.TestCase):
             d.feed(ev("close_write", f"/lab/n{i}", t, dev=1, inode=i))
         f = d.features()
         self.assertEqual((f["write_new"], f["overwrite"], f["rename_existing"]), (30, 0, 0))
+
+    def test_stale_path_state_ignored_when_inode_known(self):
+        d, out = det(), []
+        for i in range(30):
+            d.feed(ev("create", f"/lab/f{i}", 100.0, dev=1, inode=1000 + i))   # delete of these was lost
+        for i in range(30):
+            out += d.feed(ev("close_write", f"/lab/f{i}", 101 + i * 0.01, dev=1, inode=i))  # other inode
+        self.assertEqual([x.rule_id for x in out], [Detector.R1])
+
+    def test_overflow_forgets_newness(self):
+        d = det()
+        for i in range(30):
+            d.feed(ev("create", f"/lab/f{i}", 100.0))
+        d.feed(ev("overflow", "/lab", 100.5))
+        self.assertEqual(len(burst(d, 30, t0=101.0)), 1)
+
+    def test_stat_failed_create_is_not_new(self):
+        d = det()
+        for i in range(30):
+            d.feed(ev("create", f"/lab/f{i}", 100.0, quality=("stat_failed",)))
+        self.assertEqual(len(burst(d, 30, t0=100.1)), 1)
+
+    def test_no_modify_seen_unsampled_still_counts(self):
+        d = Detector(sampler=lambda e: None)
+        d.feed(ev("close_write", "/lab/x", 100.0, quality=("no_modify_seen",)))
+        self.assertEqual(d.features()["overwrite"], 1)
 
     def test_created_files_expire_to_preexisting(self):
         d = det()
@@ -283,6 +310,22 @@ class InotifyTests(unittest.TestCase):
                     evs = s.read(0.3)
                 self.assertEqual(s.status()["health"], "degraded")
                 self.assertIn("close_write", [e.action for e in evs])
+            finally:
+                s.close()
+
+    def test_dir_removal_clears_modify_tracking(self):
+        with tempfile.TemporaryDirectory() as t:
+            sub = os.path.join(t, "sub")
+            os.mkdir(sub)
+            s = ino.InotifySensor(t)
+            try:
+                fd = os.open(os.path.join(sub, "f"), os.O_CREAT | os.O_WRONLY)
+                os.write(fd, b"x")
+                s.read(0.2)
+                os.rename(sub, os.path.join(t, "moved"))
+                s.read(0.2)
+                self.assertEqual(s.modified, set())
+                os.close(fd)
             finally:
                 s.close()
 

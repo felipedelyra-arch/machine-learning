@@ -43,6 +43,8 @@ class Detector:
         self._now = 0.0
         self.seen: OrderedDict[str, None] = OrderedDict()         # event_id dedupe (replays)
         self.win: deque[tuple[float, str, str, bool | None]] = deque()  # (ts, kind, event_id, high_entropy)
+        self.kinds: Counter = Counter()
+        self.sampled = self.high = 0
         self.coverage_gaps = 0
         self.last_r1 = -math.inf
         self.last_r2: dict[str, float] = {}
@@ -62,8 +64,8 @@ class Detector:
 
     def _is_new(self, path: str, key=None) -> bool:
         # "new" = inode created during this session (by its create event), never granted by rename/hardlink
-        if key is not None and key in self.new_inodes:
-            return self._fresh(self.new_inodes[key])
+        if key is not None:          # inode known: path state is never consulted (may be stale)
+            return self._fresh(self.new_inodes.get(key))
         pk = self.path_key.get(path)
         return pk is not None and self._fresh(self.new_inodes.get(pk))
 
@@ -73,6 +75,8 @@ class Detector:
         self._bounded_put(self.seen, ev.event_id, None)
         if ev.action == "overflow":
             self.coverage_gaps += 1
+            # lost events -> newness state may be stale; forget it so everything counts as pre-existing
+            self.new_inodes.clear(); self.path_key.clear(); self.renames.clear()
             return []
         ts = self._now = ev.ts_event if ev.ts_event is not None else ev.ts_received
         key = (ev.dev, ev.inode) if ev.dev is not None and ev.inode is not None else None
@@ -88,15 +92,15 @@ class Detector:
 
         kind, high = None, None
         if ev.action == "create":
-            if "multi_link" not in ev.quality:          # a hardlink to an existing inode is not new
+            if not {"multi_link", "stat_failed"} & set(ev.quality):   # hardlink alias / unknown inode: not new
                 k = key or ("path", ev.path)
                 self._bounded_put(self.new_inodes, k, ts)
                 self._bounded_put(self.path_key, ev.path, k)
         elif ev.action == "close_write":
             ent = self.sampler(ev)
             high = None if ent is None else ent >= HIGH_ENTROPY
-            if "no_modify_seen" in ev.quality and not high:
-                return out                               # likely open-for-write probe; only ciphertext-like counts
+            if "no_modify_seen" in ev.quality and high is False:
+                return out   # likely open-for-write probe; unsampled (gone/unreadable) still counts
             kind = "write_new" if self._is_new(ev.path, key) else "overwrite"
         elif ev.action == "rename_from":
             counted = not self._is_new(ev.path)
@@ -115,14 +119,14 @@ class Detector:
                 self.new_inodes.pop(self.path_key.pop(ev.path), None)
             else:
                 kind = "delete"
-                self.path_key.pop(ev.path, None)
+                self.new_inodes.pop(self.path_key.pop(ev.path, None), None)
 
         if kind is None:
             return out
-        self.win.append((ts, kind, ev.event_id, high))
+        self._win_add((ts, kind, ev.event_id, high), +1)
         horizon = max(ts, self.win[-1][0]) - self.t.window_s
         while self.win and self.win[0][0] < horizon:
-            self.win.popleft()
+            self._win_add(self.win[0], -1)
         f = self.features()
         if (f["destructive"] >= self.t.min_destructive and f["high_entropy_writes"] >= self.t.min_high_entropy
                 and f["high_entropy_ratio"] >= self.t.min_high_entropy_ratio
@@ -138,17 +142,28 @@ class Detector:
                 f, tuple(e[2] for e in list(self.win)[-50:]), unc))
         return out
 
+    def _win_add(self, item, sign: int):
+        # running counters keep features() O(1); the window can hold thousands of events
+        if sign > 0:
+            self.win.append(item)
+        else:
+            self.win.popleft()
+        _, kind, _, high = item
+        self.kinds[kind] += sign
+        if kind in ("overwrite", "write_new") and high is not None:
+            self.sampled += sign
+        if high:
+            self.high += sign
+
     def features(self) -> dict:
-        kinds = Counter(k for _, k, _, _ in self.win)
-        sampled = sum(1 for _, k, _, h in self.win if k in ("overwrite", "write_new") and h is not None)
-        high = sum(1 for _, _, _, h in self.win if h)
+        k = self.kinds
         return {
-            "overwrite": kinds["overwrite"], "write_new": kinds["write_new"],
-            "rename_existing": kinds["rename_from"], "replace": kinds["replace"], "delete_existing": kinds["delete"],
-            "destructive": kinds["overwrite"] + kinds["rename_from"] + kinds["replace"] + kinds["delete"],
-            "high_entropy_writes": high,
-            "unsampled_writes": kinds["overwrite"] + kinds["write_new"] - sampled,
-            "high_entropy_ratio": round(high / sampled, 3) if sampled else 0.0,
+            "overwrite": k["overwrite"], "write_new": k["write_new"],
+            "rename_existing": k["rename_from"], "replace": k["replace"], "delete_existing": k["delete"],
+            "destructive": k["overwrite"] + k["rename_from"] + k["replace"] + k["delete"],
+            "high_entropy_writes": self.high,
+            "unsampled_writes": k["overwrite"] + k["write_new"] - self.sampled,
+            "high_entropy_ratio": round(self.high / self.sampled, 3) if self.sampled else 0.0,
             "coverage_gaps": self.coverage_gaps,
             "window_s": self.t.window_s,
         }

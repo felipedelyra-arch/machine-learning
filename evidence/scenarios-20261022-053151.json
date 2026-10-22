@@ -1,0 +1,71 @@
+{
+ "meta": {
+  "ts": "2026-10-22T05:31:51-0300",
+  "git": "dbfc414",
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "cpus": 4,
+  "seeds": [
+   1
+  ],
+  "files_per_lab": 200,
+  "data": "synthetic only"
+ },
+ "results": [
+  {
+   "scenario": "sim_overwrite",
+   "seed": 1,
+   "expectation": "alert",
+   "alerted": true,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": 20,
+   "seconds_to_alert": 0.105,
+   "features_at_alert": {
+    "overwrite": 20,
+    "write_new": 0,
+    "rename_existing": 0,
+    "replace": 0,
+    "delete_existing": 0,
+    "destructive": 20,
+    "high_entropy_writes": 20,
+    "unsampled_writes": 0,
+    "high_entropy_ratio": 1.0,
+    "coverage_gaps": 0,
+    "window_s": 10.0
+   },
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   },
+   "t0": 1792657907.9082007,
+   "op_log": null
+  },
+  {
+   "scenario": "benign_rm_tree",
+   "seed": 1,
+   "expectation": "no_alert",
+   "alerted": false,
+   "pass": true,
+   "ops_total": 200,
+   "ops_before_alert": null,
+   "seconds_to_alert": null,
+   "features_at_alert": null,
+   "sensor": {
+    "sensor": "linux.inotify",
+    "health": "limited",
+    "causes": [],
+    "watched_dirs": 8,
+    "overflows": 0,
+    "can_block": false
+   },
+   "t0": 1792657910.170333,
+   "op_log": null
+  }
+ ]
+}
