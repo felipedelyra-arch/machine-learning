@@ -1,0 +1,11 @@
+endguard
+Copyright 2026 endguard contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+It is provided "AS IS", WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND. It is an
+observation/detection prototype: it does not block or contain threats and its
+efficacy against real ransomware has NOT been demonstrated (synthetic data only).
+
+Optional ML pipeline dependencies (requirements-ml.txt, not shipped in the core):
+scikit-learn, numpy, scipy, joblib, threadpoolctl, cloudpickle - BSD-3-Clause
+(numpy also bundles 0BSD/MIT/Zlib/CC0 components).
