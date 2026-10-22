@@ -8,6 +8,7 @@ import json
 import ipaddress
 import multiprocessing
 import re
+import threading
 import unicodedata
 import zipfile
 from email import message_from_bytes, policy
@@ -294,12 +295,17 @@ def analyze_eml(data: bytes, trusted_authserv_ids: frozenset[str] = frozenset())
         msg = EmailMessage()
 
     hdr = _raw_headers(msg, limits)
-    display, addr = parseaddr(hdr["from"][0]) if hdr["from"] else ("", "")
-    display = _decode_words(display)
+    display, addr, reply_doms, rp_dom = "", "", [], ""
+    try:   # stdlib address parsing can recurse deeply on hostile (even 8 KiB) input
+        display, addr = parseaddr(hdr["from"][0]) if hdr["from"] else ("", "")
+        display = _decode_words(display)
+        reply_doms = list(dict.fromkeys(
+            d for _, a in getaddresses(hdr["reply-to"]) if (d := _domain(a))))
+        rp_dom = _domain(parseaddr(hdr["return-path"][0])[1]) if hdr["return-path"] else ""
+    except Exception as e:
+        errors.append(f"address headers: {type(e).__name__}")
+        limits.append("parse_failed")
     from_dom = _domain(addr)
-    reply_doms = list(dict.fromkeys(
-        d for _, a in getaddresses(hdr["reply-to"]) if (d := _domain(a))))
-    rp_dom = _domain(parseaddr(hdr["return-path"][0])[1]) if hdr["return-path"] else ""
 
     plain: list[str] = []
     html_text: list[str] = []
@@ -449,19 +455,32 @@ def analyze_eml_isolated(data: bytes, trusted_authserv_ids: frozenset[str] = fro
         raise ValueError("too large")
     ctx = multiprocessing.get_context("spawn")
     parent, child = ctx.Pipe(duplex=False)
-    why, result, proc, started = None, None, None, False
+    why, result, proc, started, th = None, None, None, False, None
     try:
         proc = ctx.Process(target=_worker, args=(child, data, trusted_authserv_ids, mem_mb), daemon=True)
         proc.start()
         started = True
         child.close()
-        if parent.poll(timeout_s):
+        # total deadline covers the read too: a child that stalls mid-message must not hang the parent
+        box: dict = {}
+
+        def reader():
             try:
-                result = json.loads(parent.recv_bytes(MAX_RESULT_BYTES))
-            except Exception:   # EOF (child killed), oversized or non-JSON result
+                box["raw"] = parent.recv_bytes(MAX_RESULT_BYTES)
+            except Exception:      # EOF (child killed) or oversized result
+                box["err"] = True
+        th = threading.Thread(target=reader, daemon=True)
+        th.start()
+        th.join(timeout_s)
+        if th.is_alive():
+            why = "timeout"
+        elif "raw" in box:
+            try:
+                result = json.loads(box["raw"])
+            except ValueError:
                 why = "worker_died"
         else:
-            why = "timeout"
+            why = "worker_died"
         if not why and not isinstance(result, dict):
             why = "worker_died"
         elif isinstance(result, dict) and "_fail" in result:
@@ -477,10 +496,14 @@ def analyze_eml_isolated(data: bytes, trusted_authserv_ids: frozenset[str] = fro
                 proc.kill()
                 proc.join()
             proc.close()
+            if th is not None:
+                th.join(1)    # child is dead -> reader gets EOF; never close the fd under a live reader
         parent.close()
         child.close()
     if why:
         return {"schema_version": SCHEMA_VERSION, "sha256": hashlib.sha256(data).hexdigest(),
-                "verdict": "incomplete", "limits_hit": [why], "parse_errors": [f"isolation: {why}"],
-                "signals": [], "score": 0}
+                "from": {"display": "", "addr": "", "domain": ""}, "reply_to_domains": [],
+                "return_path_domain": "", "auth": {"trusted": False, "spf": None, "dkim": None, "dmarc": None},
+                "urls": [], "attachments": [], "signals": [], "score": 0,
+                "verdict": "incomplete", "limits_hit": [why], "parse_errors": [f"isolation: {why}"]}
     return result

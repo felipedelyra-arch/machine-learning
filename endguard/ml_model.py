@@ -55,16 +55,19 @@ class LogisticModel:
 
 
 def load_model(path: str, expected_sha256: str) -> LogisticModel:
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
-    with os.fdopen(fd, "rb") as f:
-        blob = f.read(MAX_MODEL_BYTES + 1)
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        with os.fdopen(fd, "rb") as f:
+            blob = f.read(MAX_MODEL_BYTES + 1)
+    except OSError as e:     # missing file, symlink (ELOOP), permissions -> one error type for callers
+        raise ModelError(f"cannot read model: {type(e).__name__}") from e
     if len(blob) > MAX_MODEL_BYTES:
         raise ModelError("model too large")
     if hashlib.sha256(blob).hexdigest() != expected_sha256:
         raise ModelError("model hash does not match pin")
     try:
         d = json.loads(blob)
-    except ValueError as e:
+    except (ValueError, RecursionError) as e:
         raise ModelError("model is not JSON") from e
     if not isinstance(d, dict):
         raise ModelError("model must be an object")

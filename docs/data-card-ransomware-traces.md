@@ -27,3 +27,16 @@
 **Riscos de contaminação**: o simulador e as features vêm do mesmo autor. Um modelo pode aprender artefatos do simulador (tamanho fixo, bytes uniformes).
 
 **Armazenamento**: `data/traces/` (gitignored, ~MB), com `manifest.json` (hashes). Os traços são regeneráveis pelo script.
+
+## v2 — pré-registro (22/10/2026, antes de gravar o teste v2)
+- **Treino/validação**: todos os 300 traços v1. Sementes 0–13 → treino, 14–19 → validação (limiar + calibração Platt). O teste v1 já foi consumido, por isso entra no treino.
+- **Teste v2**: gravado depois deste registro, em `data/traces-v2-test/`.
+  - Sementes 100–111 das 15 famílias v1.
+  - Famílias inéditas, nunca treinadas: `sim_burst_pause` (rajadas de 15 ops + pausa de 11 s) e `benign_backup_rotate` (cria arquivos novos e apaga os antigos de alta entropia).
+- **Modelos**:
+  - R1;
+  - LR v2 (features de 10 s + 60 s, log1p) calibrada;
+  - ensemble R1 OU LR v2.
+- **Limiar**: o menor com FPR ≤ 10% nos traços benignos da validação, congelado antes do teste.
+- **Critério de promoção (fixado agora)**: o ensemble só é promovido se, no teste v2, o recall for maior que o da R1 com IC95 do ganho excluindo 0 (bootstrap pareado) E FP ≤ FP da R1 + 5% dos benignos.
+- Hiperparâmetro fixado a priori, sem busca: LR com C=0,1, class_weight=balanced.

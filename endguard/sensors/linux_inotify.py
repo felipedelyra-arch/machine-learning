@@ -14,7 +14,7 @@ import struct
 import time
 
 from ..features import sample_entropy
-from ..schema import FileEvent
+from ..schema import FileEvent, SchemaError
 
 IN_MODIFY, IN_CLOSE_WRITE, IN_MOVED_FROM, IN_MOVED_TO = 0x2, 0x8, 0x40, 0x80
 IN_CREATE, IN_DELETE, IN_DELETE_SELF, IN_Q_OVERFLOW, IN_IGNORED, IN_ISDIR = 0x100, 0x200, 0x400, 0x4000, 0x8000, 0x40000000
@@ -107,7 +107,9 @@ class InotifySensor:
                 out.append(FileEvent("overflow", self.root, self.name, "linux", ts_received=now, quality=QUALITY))
                 continue
             if mask & IN_IGNORED:
-                self.wds.pop(wd, None)
+                gone = self.wds.pop(wd, None)
+                if gone == self.root or not self.wds:
+                    self._degrade("watch root gone: sensor is blind")
                 continue
             if path is None:
                 continue
@@ -148,8 +150,13 @@ class InotifySensor:
                     q += ("stat_failed",)
             if act == "close_write":
                 ent = sample_entropy(path)   # sampled at read, not at write: renamed/deleted-in-between -> None
-            out.append(FileEvent(act, path, self.name, "linux", ts_received=now, dev=dev, inode=ino,
-                                 cookie=cookie, quality=q, content_entropy=ent))
+            try:
+                out.append(FileEvent(act, path, self.name, "linux", ts_received=now, dev=dev, inode=ino,
+                                     cookie=cookie, quality=q, content_entropy=ent))
+            except SchemaError:     # e.g. path > MAX_PATH built via relative chdir: count the loss, keep going
+                self.dropped += 1
+                self._degrade("event dropped: path rejected by schema (too long/invalid)")
+                out.append(FileEvent("overflow", self.root, self.name, "linux", ts_received=now, quality=QUALITY))
         return out
 
     def status(self) -> dict:

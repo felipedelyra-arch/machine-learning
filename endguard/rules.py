@@ -88,7 +88,8 @@ class Detector:
                 self.last_r2[rp] = ts
                 out.append(self._decision(self.R2, "high", f"canary {ev.action}: {ev.path}",
                                           {"path": ev.path, "action": ev.action}, (ev.event_id,),
-                                          "canary is a planted file; any change is suspicious but not proof"))
+                                          "canary is a planted file; any change is suspicious but not proof",
+                                          ((ev.action, ev.path, ts),)))
 
         kind, high = None, None
         if ev.action == "create":
@@ -123,7 +124,7 @@ class Detector:
 
         if kind is None:
             return out
-        self._win_add((ts, kind, ev.event_id, high), +1)
+        self._win_add((ts, kind, ev.event_id, high, ev.path), +1)
         horizon = max(ts, self.win[-1][0]) - self.t.window_s
         while self.win and self.win[0][0] < horizon:
             self._win_add(self.win[0], -1)
@@ -139,7 +140,8 @@ class Detector:
                 self.R1, "high",
                 f"{f['destructive']} destructive ops on pre-existing files, "
                 f"{f['high_entropy_writes']} high-entropy writes in {self.t.window_s:.0f}s",
-                f, tuple(e[2] for e in list(self.win)[-50:]), unc))
+                f, tuple(e[2] for e in list(self.win)[-50:]), unc,
+                tuple((e[1], e[4], e[0]) for e in list(self.win)[-10:])))
         return out
 
     def _win_add(self, item, sign: int):
@@ -148,7 +150,7 @@ class Detector:
             self.win.append(item)
         else:
             self.win.popleft()
-        _, kind, _, high = item
+        _, kind, _, high, _ = item
         self.kinds[kind] += sign
         if kind in ("overwrite", "write_new") and high is not None:
             self.sampled += sign
@@ -168,7 +170,7 @@ class Detector:
             "window_s": self.t.window_s,
         }
 
-    def _decision(self, rule, sev, summary, feats, evidence, uncertainty) -> Decision:
+    def _decision(self, rule, sev, summary, feats, evidence, uncertainty, summary_ev=()) -> Decision:
         return Decision(rule_id=rule, rule_version=self.VERSION, severity=sev, summary=summary,
-                        features=feats, evidence=evidence, uncertainty=uncertainty,
+                        features=feats, evidence=evidence, evidence_summary=summary_ev, uncertainty=uncertainty,
                         policy_mode=self.policy_mode, action=self._action())

@@ -103,10 +103,11 @@ class Decision:
     severity: str                          # low | medium | high
     summary: str
     features: dict
-    evidence: tuple[str, ...]              # event_ids (capped)
+    evidence: tuple[str, ...]              # event_ids (capped); events themselves are not persisted
     uncertainty: str
     policy_mode: str
     action: str                            # what the policy allowed: log | alert
+    evidence_summary: tuple = ()           # (action, path, ts) of the latest evidence events: resolvable later
     ts: float = field(default_factory=time.time)
     decision_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     schema_version: int = SCHEMA_VERSION

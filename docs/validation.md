@@ -115,3 +115,19 @@ As correções da rodada 3 ainda **não têm revisão independente**. Elas entra
   - `(` não fechado no AR descarta o resto (neutro);
   - homógrafos fora de punycode/não-ASCII, `[dot]` e espaçamento escapam;
   - **não é proteção da caixa de entrada**: só análise offline de arquivo.
+
+## Revisão do sistema integrado (2 rodadas)
+- **R1 (Sonnet): reprovado.** A correção do mail foi aprovada. Achados médios:
+  - M1: byte 8-bit fazia a CLI mail falhar sem relatório;
+  - M2: caminho > 4096 derrubava o watch (evasão sem privilégio);
+  - M3: raiz removida mantinha "limited" com o sensor cego;
+  - M4: falha da auditoria derrubava o watch e perdia o alerta.
+  - Baixos: replay frágil, `decisions` com não-UTF-8, evidência não resolvível, ml_model, `recv` sem prazo.
+  - Docs corrigidos: F1, F3 e F8 tinham alegações mais fortes que o código.
+- **Correções**: todas, com testes em `IntegratedReviewRegressions` e `test_ml_model`.
+- **R2: aprovado** (núcleo + mail). Ressalvas da TUI corrigidas pelo coordenador, sem 3ª revisão:
+  - surrogates;
+  - build_view protegido;
+  - DB aberto read-only (`mode=ro`);
+  - join da thread leitora.
+- TUI (`endguard tui`, curses, somente leitura): smoke em pty real ok; 106/106 testes.

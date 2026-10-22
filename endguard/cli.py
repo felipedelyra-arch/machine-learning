@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sqlite3
 import sys
 import time
 
@@ -17,7 +18,8 @@ MODES = ("observe", "alert")       # "ask"/"contain" intentionally not offered y
 
 
 def _print(obj):
-    print(json.dumps(obj, ensure_ascii=False, indent=2))
+    # ASCII escapes: hostile text (surrogates, bidi, C1 controls) can neither crash nor spoof the terminal
+    print(json.dumps(obj, ensure_ascii=True, indent=2))
 
 
 def cmd_watch(a):
@@ -33,28 +35,37 @@ def cmd_watch(a):
         while deadline is None or time.monotonic() < deadline:
             for ev in sensor.read():
                 for d in det.feed(ev):
-                    store.add_decision(d)
+                    # alert reaches the operator first; an audit failure must not swallow it or stop watching
                     print(json.dumps({"ALERT" if d.action == "alert" else "LOG": d.summary,
                                       "rule": d.rule_id, "id": d.decision_id}), flush=True)
+                    _audit(store.add_decision, d, sensor)
             if time.monotonic() - last_h > 5:
-                store.add_health(status())
+                _audit(store.add_health, status(), sensor)
                 last_h = time.monotonic()
     except KeyboardInterrupt:
         pass
     finally:
-        store.add_health({**sensor.status(), "health": "disabled", "causes": ["watch stopped"]})
+        _audit(store.add_health, {**sensor.status(), "health": "disabled", "causes": ["watch stopped"]}, sensor)
         sensor.close()
+
+
+def _audit(write, obj, sensor) -> None:
+    try:
+        write(obj)
+    except sqlite3.Error as e:
+        sensor._degrade(f"audit write failed: {type(e).__name__}")
+        print(json.dumps({"AUDIT_WRITE_FAILED": type(e).__name__}), file=sys.stderr, flush=True)
 
 
 def cmd_replay(a):
     det = Detector(canaries=a.canary or (), policy_mode=a.mode)
     out, bad = [], 0
-    with open(a.file) as f:
+    with open(a.file, encoding="utf-8", errors="replace") as f:
         events = []
         for line in f:
             try:
                 events.append(FileEvent.from_dict(json.loads(line)))
-            except (ValueError, TypeError, SchemaError):
+            except (ValueError, TypeError, RecursionError, SchemaError):
                 bad += 1
     events.sort(key=lambda e: e.ts_event if e.ts_event is not None else e.ts_received)
     for ev in events:
@@ -70,14 +81,20 @@ def cmd_decisions(a):
     _print(Store(a.db).decisions(a.limit) if os.path.exists(a.db) else [])
 
 
+def cmd_tui(a):
+    from .tui import run
+    run(a.db)
+
+
 def cmd_mail(a):
     from .mail import MAX_BYTES, analyze_eml_isolated
     with open(a.file, "rb") as f:
         data = f.read(MAX_BYTES + 1)
     try:
-        _print(analyze_eml_isolated(data, frozenset(a.trusted_authserv or ())))
+        report = analyze_eml_isolated(data, frozenset(a.trusted_authserv or ()))
     except ValueError as e:
         sys.exit(f"endguard mail: {e}")
+    _print(report)
 
 
 def cmd_simulate(a):
@@ -100,6 +117,7 @@ def main(argv=None):
         x.add_argument("--canary", action="append")
     sub.add_parser("status")
     d = sub.add_parser("decisions"); d.add_argument("--limit", type=int, default=20)
+    sub.add_parser("tui", help="read-only terminal view of the audit DB")
     m = sub.add_parser("mail", help="offline .eml analysis (not inbox protection)")
     m.add_argument("file")
     m.add_argument("--trusted-authserv", action="append",

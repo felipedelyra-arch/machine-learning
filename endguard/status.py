@@ -21,7 +21,7 @@ def _alive(pid: int) -> bool:
 
 
 def effective_health(db: str) -> dict:
-    h = Store(db).last_health() if os.path.exists(db) else None
+    h = Store(db, readonly=True).last_health() if os.path.exists(db) else None
     if h is None:
         return {"health": "disabled", "causes": ["no sensor has run"]}
     if h["health"] != "disabled":

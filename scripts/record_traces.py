@@ -15,6 +15,7 @@ import os
 import random
 import sys
 import threading
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -71,9 +72,37 @@ def mixed(lab, seed, rate):     # slow attack hidden in concurrent benign text e
     return log
 
 
+def burst_pause(lab, seed):     # test-only family: bursts below the 10 s window, separated by pauses
+    log = []
+    for _ in range(4):
+        log += simulator.run(lab, "overwrite", seed, 200.0, 15)
+        time.sleep(11)
+    return log
+
+
+def rotate_setup(lab, seed):
+    d = os.path.join(lab, "backups")
+    os.mkdir(d)
+    for i in range(30):
+        with open(os.path.join(d, f"old{i}.tar.gz"), "wb") as f:
+            f.write(os.urandom(16384))
+
+
+def w_backup_rotate(lab, seed):  # test-only hard negative: new archives written, old ones deleted
+    log, d = [], os.path.join(lab, "backups")
+    for i in range(30):
+        with open(os.path.join(d, f"new{i}.tar.gz"), "wb") as f:
+            f.write(os.urandom(16384))
+        os.remove(os.path.join(d, f"old{i}.tar.gz"))
+        rs.stamp(log, d)
+    return log
+
+
 def grid(fam: str, seed: int):
     """Deterministic per-(family, seed) parameters -> (workload, setup, n_files, params)."""
     rng = random.Random(f"{fam}:{seed}")
+    if fam == "sim_burst_pause":         # must precede the generic sim_* branch
+        return burst_pause, None, rs.N, {}
     if fam.startswith("sim_"):
         variant = fam[4:]
         if variant == "slow":
@@ -85,14 +114,17 @@ def grid(fam: str, seed: int):
         rate, n = rng.choice([30, 100, 300, 1000]), rng.choice([60, 200, 500])
         mf = rng.choice([None, None, rng.randint(25, 60)])   # sometimes stops early (partial run)
         return sim(variant, rate, mf), None, n, {"rate": rate, "n_files": n, "max_files": mf}
+    if fam == "benign_backup_rotate":
+        return w_backup_rotate, rotate_setup, 20, {}
     if fam == "benign_media_resync":
         return w_media_resync, media_setup, 20, {}
     return rs.SCENARIOS[fam][0], None, rs.N, {}
 
 
-MALICIOUS = ["sim_overwrite", "sim_write_new_delete", "sim_rename_overwrite", "sim_tmp_rename_replace",
+TEST_ONLY = ["sim_burst_pause", "benign_backup_rotate"]   # v2: never used for training
+MALICIOUS = ["sim_burst_pause", "sim_overwrite", "sim_write_new_delete", "sim_rename_overwrite", "sim_tmp_rename_replace",
              "sim_slow", "sim_mixed"]
-BENIGN = ["benign_copy_compressed", "benign_bulk_text_edit", "benign_rm_tree", "benign_zip_archive",
+BENIGN = ["benign_backup_rotate", "benign_copy_compressed", "benign_bulk_text_edit", "benign_rm_tree", "benign_zip_archive",
           "benign_tar_backup", "benign_unzip_media", "benign_editor_atomic_save", "benign_gzip_inplace",
           "benign_media_resync"]
 
@@ -100,6 +132,7 @@ BENIGN = ["benign_copy_compressed", "benign_bulk_text_edit", "benign_rm_tree", "
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=20)
+    ap.add_argument("--seed-start", type=int, default=0)
     ap.add_argument("--out", default="data/traces")
     ap.add_argument("--families", nargs="*")
     a = ap.parse_args()
@@ -107,8 +140,8 @@ def main():
     manifest_path = os.path.join(a.out, "manifest.json")
     manifest = json.load(open(manifest_path)) if os.path.exists(manifest_path) else {"traces": []}
     done = {t["id"] for t in manifest["traces"]}
-    for fam in a.families or MALICIOUS + BENIGN:
-        for seed in range(a.seeds):
+    for fam in a.families or [f for f in MALICIOUS + BENIGN if f not in TEST_ONLY]:
+        for seed in range(a.seed_start, a.seed_start + a.seeds):
             tid = f"{fam}-{seed:03d}"
             if tid in done:
                 continue

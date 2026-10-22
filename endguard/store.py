@@ -5,6 +5,7 @@ import json
 import os
 import sqlite3
 import time
+import urllib.parse
 
 MIGRATIONS = [
     "CREATE TABLE decisions (decision_id TEXT PRIMARY KEY, ts REAL, rule_id TEXT, severity TEXT, action TEXT, body TEXT)",
@@ -18,7 +19,10 @@ MIGRATIONS = [
 
 
 class Store:
-    def __init__(self, path: str):
+    def __init__(self, path: str, readonly: bool = False):
+        if readonly:   # viewers (status/TUI): no write lock, no migrations, never creates the file
+            self.db = sqlite3.connect(f"file:{urllib.parse.quote(os.path.abspath(path))}?mode=ro", uri=True)
+            return
         fd = os.open(path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
             os.fchmod(fd, 0o600)   # also tightens a pre-existing DB

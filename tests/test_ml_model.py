@@ -47,8 +47,13 @@ class ModelLoadTests(unittest.TestCase):
                 load_model(*write(t, None, raw=b" " * (64 * 1024 + 1)))
             p, h = write(t, GOOD)
             os.symlink(p, os.path.join(t, "link.json"))
-            with self.assertRaises(OSError):
+            with self.assertRaises(ModelError):
                 load_model(os.path.join(t, "link.json"), h)
+            with self.assertRaises(ModelError):
+                load_model(os.path.join(t, "missing.json"), h)
+            deep = b"[" * 5000 + b"]" * 5000
+            with self.assertRaises(ModelError):
+                load_model(*write(t, None, raw=deep))
 
 
 if __name__ == "__main__":

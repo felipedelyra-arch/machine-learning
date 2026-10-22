@@ -464,3 +464,59 @@ class StoreTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IntegratedReviewRegressions(unittest.TestCase):
+    def test_overlong_path_is_dropped_not_fatal(self):
+        with tempfile.TemporaryDirectory() as t:
+            s = ino.InotifySensor(t)
+            try:
+                with mock.patch("endguard.schema.MAX_PATH", len(os.path.realpath(t)) + 3):
+                    with open(os.path.join(t, "a_long_name"), "w") as f:
+                        f.write("x")
+                    evs = s.read(0.3)
+                self.assertIn("overflow", [e.action for e in evs])
+                self.assertEqual(s.status()["health"], "degraded")
+            finally:
+                s.close()
+
+    def test_root_removed_marks_blind(self):
+        t = tempfile.mkdtemp()
+        s = ino.InotifySensor(t)
+        try:
+            os.rmdir(t)
+            s.read(0.3)
+            self.assertEqual(s.status()["health"], "degraded")
+            self.assertTrue(any("root gone" in c for c in s.status()["causes"]))
+        finally:
+            s.close()
+
+    def test_audit_failure_keeps_watching_and_prints_alert(self):
+        from endguard import cli
+        sensor = mock.Mock()
+        sensor.status.return_value = {"health": "limited", "causes": []}
+        boom = mock.Mock(side_effect=sqlite3.OperationalError("disk full"))
+        cli._audit(boom, {"x": 1}, sensor)
+        sensor._degrade.assert_called_once()
+
+    def test_replay_survives_bad_utf8_and_deep_json(self):
+        with tempfile.TemporaryDirectory() as t:
+            p = os.path.join(t, "r.jsonl")
+            good = json.dumps(ev("create", "/a", 1.0).to_dict())
+            with open(p, "wb") as f:
+                f.write(b"\xff\xfe\n" + b"[" * 5000 + b"\n" + good.encode() + b"\n")
+            with mock.patch("builtins.print") as pr:
+                cli_main(["replay", p])
+            out = json.loads(pr.call_args[0][0])
+            self.assertEqual((out["events"], out["rejected"]), (1, 2))
+
+    def test_print_escapes_hostile_text(self):
+        with mock.patch("builtins.print") as pr:
+            from endguard.cli import _print
+            _print({"p": "a\udcff\u202eb\x9b"})
+        self.assertTrue(pr.call_args[0][0].isascii())
+
+    def test_r1_decision_has_resolvable_evidence(self):
+        d = burst(det(), 30)[0]
+        self.assertTrue(d.evidence_summary and all(len(x) == 3 for x in d.evidence_summary))
+        self.assertTrue(d.evidence_summary[-1][1].startswith("/lab/"))
