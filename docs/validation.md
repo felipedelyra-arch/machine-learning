@@ -51,4 +51,22 @@ Resultado: 35/35 testes; bateria com 13 cenários × 3 sementes = 39/39 conforme
 
 A variação 24 vs 20 vem da latência entre o simulador e o pump do sensor (o simulador roda a 200 ops/s). Uma amostra de 3 sementes não sustenta nenhuma taxa estatística.
 
-Revisão da rodada 2: pendente.
+Revisão da rodada 2 (Sonnet): **reprovado**. Os dois altos da rodada 1 foram confirmados como fechados. Achados novos:
+- (1) ALTO: o conjunto de IN_MODIFY podia ser enchido, cegando o R1 sem degradar a saúde;
+- (2) ALTO: escrita por mmap e rename-antes-do-close tinham o `close_write` descartado (regressão);
+- (3) MÉDIO: "novo" por caminho era contornável por hardlink e pelas fases rename→espera→overwrite;
+- (4)/(5) BAIXOS: FP de `rename_to` mais amplo que o documentado; overflow não limpava o rastreamento.
+
+## Rodada 3: correções do coordenador (limite de 2 rodadas de revisão atingido)
+| Achado | Estado | Verificação |
+|---|---|---|
+| 1 enchente do rastreamento | corrigido: limpa em delete/rename/overflow; ao encher, limpa + degraded, nunca descarta | `test_modify_tracking_cleared_on_unlink`, `test_modify_flood_degrades_not_blinds` |
+| 2 mmap / rename antes do close | corrigido: `close_write` sempre emitido, com `no_modify_seen`; conta se a entropia for alta | `test_mmap_write_is_not_dropped`, `test_open_for_write_without_writing_is_flagged_and_ignored_if_low_entropy` |
+| 3 hardlink / fases | corrigido: novidade por (dev,inode); `rename_to` não concede; `multi_link` nunca é novo | `test_hardlink_alias_is_not_new`, `test_phased_rename_then_overwrite_detected`, `test_new_file_renamed_stays_new` |
+| 4 FP de rename_to | documentado | — |
+| 5 overflow | corrigido | — |
+| simulador: janela residual por caminho | risco aceito temporariamente (mesmo uid, lab 0700) — **decisão pendente do responsável (usuário)** | — |
+
+Resultado: 41/41 testes; bateria com 13 cenários × 3 sementes = 39/39 conforme o esperado (`evidence/scenarios-20261022-051252.*`).
+
+As correções da rodada 3 ainda **não têm revisão independente**. Elas entram na revisão de arquitetura/sistema integrado do próximo marco.

@@ -3,10 +3,10 @@
 **Concluído**:
 - Marco A parcial: arquitetura, matriz de capacidades e resumo de ameaças.
 - Marco B parcial: schema, sensor inotify, regras R1/R2, auditoria, CLI, replay, simulador seguro e bateria.
-- 2 rodadas de teste.
+- 3 rodadas de correção e teste, com 2 revisões independentes; ver `docs/validation.md`.
 
 **Pendente (próxima ação primeiro)**:
-1. Fechar a revisão da rodada 2.
+1. Revisão independente das correções da rodada 3 (junto com a revisão de arquitetura).
 2. Modelo de ameaças completo + revisão de arquitetura antes de existir executor/IPC.
 3. fanotify (exige root ou CAP_SYS_ADMIN: **autorização do usuário**) para atribuir processo e mediar aberturas.
 4. Marco C: dataset de traços sintéticos + baseline (ADR para scikit-learn).

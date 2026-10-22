@@ -102,6 +102,35 @@ class DetectorTests(unittest.TestCase):
             out += d.feed(ev("rename_to", f"/lab/f{i}", t, cookie=i + 1))
         self.assertEqual([x.rule_id for x in out], [Detector.R1])
 
+    def test_hardlink_alias_is_not_new(self):
+        d, out = det(), []
+        for i in range(30):
+            t = 100 + i * 0.01
+            out += d.feed(ev("create", f"/lab/f{i}.l", t, dev=1, inode=i, quality=("multi_link",)))
+            out += d.feed(ev("close_write", f"/lab/f{i}.l", t, dev=1, inode=i))
+        self.assertEqual([x.rule_id for x in out], [Detector.R1])
+
+    def test_phased_rename_then_overwrite_detected(self):
+        d, out = det(), []
+        for i in range(30):
+            out += d.feed(ev("rename_from", f"/lab/f{i}", 100 + i * 0.01, cookie=i + 1))
+            out += d.feed(ev("rename_to", f"/lab/f{i}.x", 100 + i * 0.01, cookie=i + 1))
+        self.assertEqual(out, [])                     # renames alone: no entropy signal
+        for i in range(30):
+            out += d.feed(ev("close_write", f"/lab/f{i}.x", 115 + i * 0.01, dev=1, inode=i))
+        self.assertEqual([x.rule_id for x in out], [Detector.R1])
+
+    def test_new_file_renamed_stays_new(self):
+        d = det()
+        for i in range(30):
+            t = 100 + i * 0.01
+            d.feed(ev("create", f"/lab/n{i}.part", t, dev=1, inode=i))
+            d.feed(ev("rename_from", f"/lab/n{i}.part", t, cookie=i + 1))
+            d.feed(ev("rename_to", f"/lab/n{i}", t, cookie=i + 1))
+            d.feed(ev("close_write", f"/lab/n{i}", t, dev=1, inode=i))
+        f = d.features()
+        self.assertEqual((f["write_new"], f["overwrite"], f["rename_existing"]), (30, 0, 0))
+
     def test_created_files_expire_to_preexisting(self):
         d = det()
         for i in range(30):
@@ -191,15 +220,69 @@ class InotifyTests(unittest.TestCase):
                 s.close()
             self.assertIn(("close_write", "f"), acts)
 
-    def test_open_for_write_without_writing_is_ignored(self):
+    def _events(self, setup, act):
         with tempfile.TemporaryDirectory() as t:
             p = os.path.join(t, "f")
-            with open(p, "w") as f:
-                f.write("x")
+            setup(p)
             s = ino.InotifySensor(t)
             try:
-                os.close(os.open(p, os.O_RDWR))
-                self.assertEqual(s.read(0.3), [])
+                act(p)
+                return s, s.read(0.3)
+            finally:
+                s.close()
+
+    def test_open_for_write_without_writing_is_flagged_and_ignored_if_low_entropy(self):
+        def setup(p):
+            with open(p, "w") as f:
+                f.write("plain text " * 100)
+        _, evs = self._events(setup, lambda p: os.close(os.open(p, os.O_RDWR)))
+        self.assertEqual([e.action for e in evs], ["close_write"])
+        self.assertIn("no_modify_seen", evs[0].quality)
+        self.assertEqual(Detector().feed(evs[0]), [])
+        d = Detector()
+        d.feed(evs[0])
+        self.assertEqual(d.features()["overwrite"], 0)
+
+    def test_mmap_write_is_not_dropped(self):
+        import mmap
+
+        def setup(p):
+            with open(p, "wb") as f:
+                f.write(b"a" * 8192)
+
+        def act(p):
+            with open(p, "r+b") as f, mmap.mmap(f.fileno(), 0) as m:
+                m[:] = os.urandom(8192)
+                m.flush()
+        _, evs = self._events(setup, act)
+        cw = [e for e in evs if e.action == "close_write"]
+        self.assertEqual(len(cw), 1)
+        d = Detector()
+        d.feed(cw[0])
+        self.assertEqual(d.features()["overwrite"], 1)   # high entropy -> counted despite no IN_MODIFY
+
+    def test_modify_tracking_cleared_on_unlink(self):
+        def act(p):
+            fd = os.open(p, os.O_RDWR)
+            os.write(fd, b"x")
+            os.unlink(p)
+            os.close(fd)
+        s, _ = self._events(lambda p: open(p, "w").close(), act)
+        self.assertEqual(s.modified, set())
+
+    def test_modify_flood_degrades_not_blinds(self):
+        with tempfile.TemporaryDirectory() as t:
+            s = ino.InotifySensor(t)
+            try:
+                with mock.patch.object(ino, "MAX_MODIFIED", 3):
+                    fds = [os.open(os.path.join(t, f"f{i}"), os.O_CREAT | os.O_WRONLY) for i in range(5)]
+                    for fd in fds:
+                        os.write(fd, b"x")     # modified, still open -> tracked entries pile up
+                    for fd in fds:
+                        os.close(fd)
+                    evs = s.read(0.3)
+                self.assertEqual(s.status()["health"], "degraded")
+                self.assertIn("close_write", [e.action for e in evs])
             finally:
                 s.close()
 

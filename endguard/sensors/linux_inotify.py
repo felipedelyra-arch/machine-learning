@@ -25,6 +25,7 @@ HDR = struct.Struct("iIII")
 MAP = {IN_CLOSE_WRITE: "close_write", IN_MOVED_FROM: "rename_from", IN_MOVED_TO: "rename_to",
        IN_CREATE: "create", IN_DELETE: "delete"}
 QUALITY = ("no_process_attribution", "no_kernel_timestamp")
+MAX_MODIFIED = 100_000
 
 
 def parse(buf: bytes, wd_paths: dict[int, str]):
@@ -102,6 +103,7 @@ class InotifySensor:
             if mask & IN_Q_OVERFLOW:
                 self.dropped += 1
                 self._degrade("kernel queue overflow: events lost")
+                self.modified.clear()   # lost events: modify tracking no longer trustworthy
                 out.append(FileEvent("overflow", self.root, self.name, "linux", ts_received=now, quality=QUALITY))
                 continue
             if mask & IN_IGNORED:
@@ -114,24 +116,33 @@ class InotifySensor:
                     self._watch_tree(path)   # new dir: files created before the watch lands are missed (race)
                 continue
             if mask & IN_MODIFY:
-                if len(self.modified) < 100_000:   # ponytail: cap; beyond it unmodified closes are dropped
-                    self.modified.add(path)
+                if len(self.modified) >= MAX_MODIFIED:
+                    self.modified.clear()   # flood: degrade + fall back to "no_modify_seen" (never drop events)
+                    self._degrade("modify-tracking set flooded")
+                self.modified.add(path)
                 continue
+            extra = ()
             if mask & IN_CLOSE_WRITE:
-                if path not in self.modified:
-                    continue        # opened for write but nothing written (e.g. O_RDWR probe)
+                if path in self.modified:
+                    self.modified.discard(path)
+                else:
+                    # no write() seen: O_RDWR probe, mmap write, or renamed before close. Ambiguous, not dropped.
+                    extra = ("no_modify_seen",)
+            elif mask & (IN_DELETE | IN_MOVED_FROM):
                 self.modified.discard(path)
             act = next((a for bit, a in MAP.items() if mask & bit), None)
             if act is None:
                 continue
             dev = ino = ent = None
-            q = QUALITY
+            q = QUALITY + extra
             if act not in ("delete", "rename_from"):
                 try:
                     st = os.lstat(path)
                     dev, ino = st.st_dev, st.st_ino
+                    if st.st_nlink > 1:
+                        q += ("multi_link",)
                 except OSError:
-                    q = QUALITY + ("stat_failed",)
+                    q += ("stat_failed",)
             if act == "close_write":
                 ent = sample_entropy(path)   # sampled at read, not at write: renamed/deleted-in-between -> None
             out.append(FileEvent(act, path, self.name, "linux", ts_received=now, dev=dev, inode=ino,

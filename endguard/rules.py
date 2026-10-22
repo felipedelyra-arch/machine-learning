@@ -29,7 +29,7 @@ class Detector:
     activity can add up with malicious activity; this is a documented coverage limit.
     """
     R1, R2 = "R1.mass_destructive_change", "R2.canary_touched"
-    VERSION = 2
+    VERSION = 3
 
     def __init__(self, thresholds: Thresholds | None = None, canaries=(), sampler=None,
                  policy_mode: str = "observe"):
@@ -37,8 +37,10 @@ class Detector:
         self.canaries = {os.path.realpath(c) for c in canaries}
         self.sampler = sampler or (lambda ev: ev.content_entropy)
         self.policy_mode = policy_mode
-        self.created: OrderedDict[str, float] = OrderedDict()   # path -> creation ts
-        self.renames: OrderedDict[int, bool] = OrderedDict()     # cookie -> rename_from already counted
+        self.new_inodes: OrderedDict = OrderedDict()   # (dev, ino) | ("path", p) -> creation ts
+        self.path_key: OrderedDict = OrderedDict()     # path -> key of a session-created inode
+        self.renames: OrderedDict = OrderedDict()      # cookie -> (rename_from counted, key)
+        self._now = 0.0
         self.seen: OrderedDict[str, None] = OrderedDict()         # event_id dedupe (replays)
         self.win: deque[tuple[float, str, str, bool | None]] = deque()  # (ts, kind, event_id, high_entropy)
         self.coverage_gaps = 0
@@ -55,9 +57,15 @@ class Detector:
         if len(od) > MAX_TRACKED:
             od.popitem(last=False)   # oldest forgotten -> treated as pre-existing (conservative)
 
-    def _is_new(self, path: str, ts: float) -> bool:
-        c = self.created.get(path)
-        return c is not None and ts - c <= self.t.created_ttl_s
+    def _fresh(self, ts_created) -> bool:
+        return ts_created is not None and self._now - ts_created <= self.t.created_ttl_s
+
+    def _is_new(self, path: str, key=None) -> bool:
+        # "new" = inode created during this session (by its create event), never granted by rename/hardlink
+        if key is not None and key in self.new_inodes:
+            return self._fresh(self.new_inodes[key])
+        pk = self.path_key.get(path)
+        return pk is not None and self._fresh(self.new_inodes.get(pk))
 
     def feed(self, ev: FileEvent) -> list[Decision]:
         if ev.event_id in self.seen:
@@ -66,39 +74,48 @@ class Detector:
         if ev.action == "overflow":
             self.coverage_gaps += 1
             return []
-        ts = ev.ts_event if ev.ts_event is not None else ev.ts_received
+        ts = self._now = ev.ts_event if ev.ts_event is not None else ev.ts_received
+        key = (ev.dev, ev.inode) if ev.dev is not None and ev.inode is not None else None
         out: list[Decision] = []
 
         if ev.action != "create" and os.path.realpath(ev.path) in self.canaries:
-            key = os.path.realpath(ev.path)
-            if ts - self.last_r2.get(key, -math.inf) >= self.t.window_s:
-                self.last_r2[key] = ts
+            rp = os.path.realpath(ev.path)
+            if ts - self.last_r2.get(rp, -math.inf) >= self.t.window_s:
+                self.last_r2[rp] = ts
                 out.append(self._decision(self.R2, "high", f"canary {ev.action}: {ev.path}",
                                           {"path": ev.path, "action": ev.action}, (ev.event_id,),
                                           "canary is a planted file; any change is suspicious but not proof"))
 
         kind, high = None, None
         if ev.action == "create":
-            self._bounded_put(self.created, ev.path, ts)
+            if "multi_link" not in ev.quality:          # a hardlink to an existing inode is not new
+                k = key or ("path", ev.path)
+                self._bounded_put(self.new_inodes, k, ts)
+                self._bounded_put(self.path_key, ev.path, k)
         elif ev.action == "close_write":
             ent = self.sampler(ev)
             high = None if ent is None else ent >= HIGH_ENTROPY
-            kind = "write_new" if self._is_new(ev.path, ts) else "overwrite"
+            if "no_modify_seen" in ev.quality and not high:
+                return out                               # likely open-for-write probe; only ciphertext-like counts
+            kind = "write_new" if self._is_new(ev.path, key) else "overwrite"
         elif ev.action == "rename_from":
-            counted = not self._is_new(ev.path, ts)
-            self.created.pop(ev.path, None)
-            self._bounded_put(self.renames, ev.cookie, counted)
+            counted = not self._is_new(ev.path)
+            self._bounded_put(self.renames, ev.cookie, (counted, self.path_key.pop(ev.path, None)))
             kind = "rename_from" if counted else None
         elif ev.action == "rename_to":
-            counted = self.renames.pop(ev.cookie, None)
-            if not counted and not self._is_new(ev.path, ts):
-                kind = "replace"     # tmp-then-rename over a (possibly) pre-existing file; inotify can't tell
-            self._bounded_put(self.created, ev.path, ts)
+            info = self.renames.pop(ev.cookie, None)
+            if info is None or (not info[0] and not self._is_new(ev.path)):
+                kind = "replace"   # moved in from outside, or tmp-then-rename over a non-new file
+            if info is not None and info[1] is not None:
+                self._bounded_put(self.path_key, ev.path, info[1])   # inode keeps its own status
+            else:
+                self.path_key.pop(ev.path, None)
         elif ev.action == "delete":
-            if self._is_new(ev.path, ts):
-                self.created.pop(ev.path, None)
+            if self._is_new(ev.path):
+                self.new_inodes.pop(self.path_key.pop(ev.path), None)
             else:
                 kind = "delete"
+                self.path_key.pop(ev.path, None)
 
         if kind is None:
             return out
